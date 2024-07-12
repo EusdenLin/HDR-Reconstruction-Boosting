@@ -1,3 +1,8 @@
 output/
 temp_inpaint_iterative/
 *.pyc
+data/
+test_control/
+test_control_new/
+test_no_control/
+DiffusionLight-LoRA-Trainer/

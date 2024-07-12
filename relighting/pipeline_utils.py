@@ -48,7 +48,7 @@ def expand_noise(noise, shape, seed, device, dtype):
 def custom_prepare_latents(
         self,
         batch_size,
-        num_channels_latents,
+        num_channels_latents, 
         height,
         width,
         dtype,
