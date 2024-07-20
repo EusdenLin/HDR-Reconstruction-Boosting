@@ -30,11 +30,11 @@ pipe = CustomStableDiffusionXLControlNetInpaintPipeline.from_pretrained(
     ).to("cuda")
 
 # [t60, t68, t91]
-test_case = "t91"
+test_case = "t60"
 
-img_path = "./data/VDS/"+test_case+"/val/EV-3.png"
-mask_path = "./data/VDS/"+test_case+"/val/mask_val.png"
-prompt_path = "./data/VDS/"+test_case+"/caption.txt"
+img_path = "./data/strength_test/"+test_case+"/test/-1.png"
+mask_path = "./data/strength_test/"+test_case+"/val/mask_val.png"
+prompt_path = "./data/strength_test/"+test_case+"/caption.txt"
 
 image = load_image(img_path).resize((1024, 1024))
 mask_image = load_image(mask_path).resize((1024, 1024))
@@ -54,7 +54,7 @@ kwargs = {
       'image': image,
       'mask_image': mask_image,
       'control_image': control_image,
-      'strength': 1.0,
+      'strength': 0.85,
       'current_seed': 1000, # we still need seed in the pipeline!
       'controlnet_conditioning_scale': 0.5,
       'height': 1024,
@@ -68,7 +68,7 @@ image = pipe(
 ).images
 
 for i, img in enumerate(image):
-  img.save(f"./test_control_new/"+test_case+"_1.0.png")
+  img.save(f"./data/strength_test/"+test_case+"/results/-1.png")
 
 
 
