@@ -96,8 +96,9 @@ def process_image(args, info):
         preview_dir = os.path.join(args.output_dir, "preview")
         os.makedirs(preview_dir, exist_ok=True)
         bracket = []
-        for s in 2 ** np.linspace(0, evs[-1], 10): #evs[-1] is -5
+        for s, num in zip(2 ** np.linspace(0, evs[-1], 7), np.linspace(0, evs[-1], 7)): #evs[-1] is -5
             lumi = np.clip((s * hdr_rgb) ** (1/args.gamma), 0, 1)
+            skimage.io.imsave(os.path.join(preview_dir, name+f"_{num}.png"), skimage.img_as_ubyte(lumi))
             bracket.append(lumi)
         bracket = np.concatenate(bracket, axis=1)
         skimage.io.imsave(os.path.join(preview_dir, name+".png"), skimage.img_as_ubyte(bracket))
