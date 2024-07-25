@@ -90,6 +90,7 @@ def process_image(args, info):
     
     
     ldr_rgb, _, _ = hdr2ldr(hdr_rgb)
+    skimage.io.imsave(os.path.join(hdrdir, "tonemapped.png"), skimage.img_as_ubyte(ldr_rgb))
     
     ezexr.imwrite(os.path.join(hdrdir, name+".exr"), hdr_rgb.astype(np.float32))
     if args.preview_output:
