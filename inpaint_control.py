@@ -56,7 +56,7 @@ depth_estimator = transformers_pipeline("depth-estimation", device=device)
 control_image = depth_estimator(image)['depth']
 control_image.save(f"./test.png")
 
-prompt = "cloudy sky in the background"
+prompt = "a clear blue sky with a few white clouds scattered around. The sunlight appears to be shining directly down in the background. The background is very very white"
 generator = torch.Generator(device="cuda")
 
 kwargs = {
@@ -68,7 +68,7 @@ kwargs = {
       'image': image,
       'mask_image': mask_image,
       'control_image': control_image,
-      'strength': 0.8,
+      'strength': 0.95,
       'current_seed': 1000, # we still need seed in the pipeline!
       'controlnet_conditioning_scale': 0.5,
       'height': 1024,
@@ -82,4 +82,5 @@ image = pipe(
 ).images
 
 for i, img in enumerate(image):
-  img.save(f"./data/strength_test/"+test_case+"/results/"+exposure+".png")
+  # img.save(f"./data/strength_test/"+test_case+"/results/"+exposure+".png")
+  img.save('./test'+exposure+'.png')

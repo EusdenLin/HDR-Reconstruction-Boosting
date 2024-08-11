@@ -170,6 +170,8 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             )
         # at which timestep to set the initial noise (n.b. 50% if strength is 0.5)
         latent_timestep = timesteps[:1].repeat(batch_size * num_images_per_prompt)
+
+        breakpoint()
         # create a boolean to check if the strength is set to 1. if so then initialise the latents with pure noise
         is_strength_max = strength == 1.0
 
