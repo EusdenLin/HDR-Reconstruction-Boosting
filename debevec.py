@@ -33,7 +33,6 @@ images, times = loadExposureSeq(args.input)
  
 calibrate = cv.createCalibrateDebevec()
 response = calibrate.process(images, times)
-breakpoint()
  
  
  

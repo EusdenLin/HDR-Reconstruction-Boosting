@@ -1,4 +1,0 @@
-t60_ev3.png 1
-t60_ev2.png 2
-t60_ev1.png 4
-t60_ev0.png 8

@@ -15,8 +15,8 @@ def create_argparser():
     parser.add_argument("--output_dir", type=str, required=True, help='directory that contain the image') #dataset name or directory 
     parser.add_argument("--endwith", type=str, default=".png" ,help='file ending to filter out unwant image')
     parser.add_argument("--ev_string", type=str, default="_ev" ,help='string that use for search ev value')
-    parser.add_argument("--EV", type=str, default="3, 2, 1, 0, -1, -2, -3" ,help='avalible ev value')
-    parser.add_argument("--gamma", default=2.2, help="Gamma value", type=float)
+    parser.add_argument("--EV", type=str, default="0, -1, -2, -3" ,help='avalible ev value')
+    parser.add_argument("--gamma", default=2.4, help="Gamma value", type=float)
     parser.add_argument('--preview_output', dest='preview_output', action='store_true')
     parser.set_defaults(preview_output=True)
     return parser
@@ -74,13 +74,13 @@ def process_image(args, info):
     # start from darkest image
     out_luminace = luminances[len(evs) - 1]
 
-    for i in range(len(evs) - 1, 0, -1):
-        # compute mask
-        maxval = 1 / (2 ** evs[i-1])
-        p1 = np.clip((luminances[i-1] - 0.9 * maxval) / (0.1 * maxval), 0, 1)
-        p2 = out_luminace > luminances[i-1]
-        mask = (p1 * p2).astype(np.float32)
-        out_luminace = luminances[i-1] * (1-mask) + out_luminace * mask
+    # for i in range(len(evs) - 1, 0, -1):
+    #     # compute mask
+    #     maxval = 1 / (2 ** evs[i-1])
+    #     p1 = np.clip((luminances[i-1] - 0.9 * maxval) / (0.1 * maxval), 0, 1)
+    #     p2 = out_luminace > luminances[i-1]
+    #     mask = (p1 * p2).astype(np.float32)
+    #     out_luminace = luminances[i-1] * (1-mask) + out_luminace * mask
         
     hdr_rgb = image0_linear * (out_luminace / (luminances[0] + 1e-10))[:, :, np.newaxis]
     

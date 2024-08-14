@@ -40,8 +40,6 @@ pipe = CustomStableDiffusionXLControlNetInpaintPipeline.from_pretrained(
 #     torch_dtype=torch.float16,
 #     ).to("cuda")
 
-
-
 # [t60, t68, t91]
 test_case = "t60"
 exposure = "-3"
@@ -52,12 +50,16 @@ mask_path = "./data/strength_test/"+test_case+"/val/mask_val.png"
 
 image = load_image(img_path).resize((1024, 1024))
 mask_image = load_image(mask_path).resize((1024, 1024))
-depth_estimator = transformers_pipeline("depth-estimation", device=device)
-control_image = depth_estimator(image)['depth']
-control_image.save(f"./test.png")
+# depth_estimator = transformers_pipeline("depth-estimation", device=device)
+# control_image = depth_estimator(image)['depth']
+control_image = load_image("./depth.png").resize((1024, 1024))
+
+# control_image.save(f"./test_depth.png")
 
 prompt = "a clear blue sky with a few white clouds scattered around. The sunlight appears to be shining directly down in the background. The background is very very white"
 generator = torch.Generator(device="cuda")
+
+image_2 = load_image("./results_test/tone_mapped/t60_-1.5.png").resize((1024, 1024))
 
 kwargs = {
       # "prompt_embeds": prompt_embeds,
@@ -66,9 +68,15 @@ kwargs = {
       'num_inference_steps': 200,
       'generator': generator,
       'image': image,
+      'image_2': image_2, # for consistency
       'mask_image': mask_image,
       'control_image': control_image,
-      'strength': 0.95,
+      'strength': 0.9,
+      'inpaint_kwargs': {
+          'strength': 0.2,
+          'weight': 0.9,
+          'method': 'normal',
+      },
       'current_seed': 1000, # we still need seed in the pipeline!
       'controlnet_conditioning_scale': 0.5,
       'height': 1024,
@@ -83,4 +91,4 @@ image = pipe(
 
 for i, img in enumerate(image):
   # img.save(f"./data/strength_test/"+test_case+"/results/"+exposure+".png")
-  img.save('./test'+exposure+'.png')
+  img.save(f'./test_{exposure}.png')

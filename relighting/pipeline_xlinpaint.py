@@ -10,6 +10,12 @@ from diffusers.pipelines.stable_diffusion_xl.pipeline_output import StableDiffus
 from diffusers.pipelines.stable_diffusion.pipeline_output import StableDiffusionPipelineOutput
 from relighting.pipeline_utils import custom_prepare_latents, custom_prepare_mask_latents, rescale_noise_cfg
 
+# we still need
+# 1. another input image
+# 2. input latents
+# 3. another strength
+# 4. another num_inference_steps
+
 class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlNetInpaintPipeline):
     @torch.no_grad()
     def __call__(
@@ -17,6 +23,7 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
         prompt: Union[str, List[str]] = None,
         prompt_2: Optional[Union[str, List[str]]] = None,
         image: PipelineImageInput = None,
+        image_2: PipelineImageInput = None,
         mask_image: PipelineImageInput = None,
         control_image: Union[
             PipelineImageInput,
@@ -25,6 +32,7 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
         height: Optional[int] = None,
         width: Optional[int] = None,
         strength: float = 0.9999,
+        inpaint_kwargs: Optional[Dict[str, Any]] = None,
         num_inference_steps: int = 50,
         denoising_start: Optional[float] = None,
         denoising_end: Optional[float] = None,
@@ -159,26 +167,48 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             return isinstance(denoising_end, float) and 0 < dnv < 1
 
         self.scheduler.set_timesteps(num_inference_steps, device=device)
-        timesteps, num_inference_steps = self.get_timesteps(
+        timesteps, num_inference_steps1 = self.get_timesteps(
             num_inference_steps, strength, device, denoising_start=denoising_start if denoising_value_valid else None
         )
+
+        timesteps_2, num_inference_steps_2 = self.get_timesteps(
+            num_inference_steps, inpaint_kwargs['strength'], device, denoising_start=denoising_start if denoising_value_valid else None
+        )
+
+        num_inference_steps = num_inference_steps1
         # check that number of inference steps is not < 1 - as this doesn't make sense
         if num_inference_steps < 1:
             raise ValueError(
                 f"After adjusting the num_inference_steps by strength parameter: {strength}, the number of pipeline"
                 f"steps is {num_inference_steps} which is < 1 and not appropriate for this pipeline."
             )
+        
+        if num_inference_steps_2 < 1:
+            raise ValueError(
+                f"After adjusting the num_inference_steps by strength parameter: {inpaint_kwargs['strength']}, the number of pipeline"
+                f"steps is {num_inference_steps_2} which is < 1 and not appropriate for this pipeline."
+            )
+        
+        ##############################
+        #### modify the timesteps ####
+        ##############################
+        
+        # 
         # at which timestep to set the initial noise (n.b. 50% if strength is 0.5)
         latent_timestep = timesteps[:1].repeat(batch_size * num_images_per_prompt)
+        latent2_timestep = timesteps_2[:1].repeat(batch_size * num_images_per_prompt)
 
-        breakpoint()
         # create a boolean to check if the strength is set to 1. if so then initialise the latents with pure noise
         is_strength_max = strength == 1.0
+        is_strength_max_2 = inpaint_kwargs['strength'] == 1.0
 
         # 5. Preprocess mask and image - resizes image and mask w.r.t height and width
         # 5.1 Prepare init image
         init_image = self.image_processor.preprocess(image, height=height, width=width)
         init_image = init_image.to(dtype=torch.float32)
+
+        init_image_2 = self.image_processor.preprocess(image_2, height=height, width=width)
+        init_image_2 = init_image_2.to(dtype=torch.float32)
 
         # 5.2 Prepare control images
         if isinstance(controlnet, ControlNetModel):
@@ -241,11 +271,6 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             is_strength_max=is_strength_max,
             return_noise=True,
             return_image_latents=return_image_latents,
-            # newx=newx,
-            # newy=newy,
-            # newr=newr,
-            # current_seed=current_seed,
-            # use_noise_moving=use_noise_moving,
         )
 
         if return_image_latents:
@@ -253,6 +278,28 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
         else:
             latents, noise = latents_outputs
 
+        # 6.1 Prepare consistency latents
+        latents_outputs_2 = self.prepare_latents(
+            batch_size * num_images_per_prompt,
+            num_channels_latents,
+            height,
+            width,
+            prompt_embeds.dtype,
+            device,
+            generator,
+            None,
+            image=init_image_2,
+            timestep=latent2_timestep,
+            is_strength_max=is_strength_max_2,
+            return_noise=True,
+            return_image_latents=return_image_latents,
+        )
+
+        if return_image_latents:
+            latents_2, noise_2, image_latents_2 = latents_outputs_2
+        else:
+            latents_2, noise_2 = latents_outputs_2
+            
         # 7. Prepare mask latent variables
         mask, masked_image_latents = self.prepare_mask_latents(
             mask,
@@ -352,8 +399,16 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             num_inference_steps = len(list(filter(lambda ts: ts >= discrete_timestep_cutoff, timesteps)))
             timesteps = timesteps[:num_inference_steps]
 
+        # breakpoint() # check num_inference_steps, timesteps
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
+                if t == latent2_timestep and inpaint_kwargs['method'] == 'iterative':
+                    print(f'[info] latent blending: strength={inpaint_kwargs["strength"]}, weight={inpaint_kwargs["weight"]}')
+                    print(latent2_timestep)
+                    weight1 = inpaint_kwargs['weight']
+                    weight2 = 1 - weight1   
+                    latents = (latents_2 * init_mask * weight1) + (latents * init_mask * weight2) + (1 - init_mask) * latents
+
                 # expand the latents if we are doing classifier free guidance
                 latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
 
