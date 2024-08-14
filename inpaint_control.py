@@ -59,7 +59,7 @@ control_image = load_image("./depth.png").resize((1024, 1024))
 prompt = "a clear blue sky with a few white clouds scattered around. The sunlight appears to be shining directly down in the background. The background is very very white"
 generator = torch.Generator(device="cuda")
 
-image_2 = load_image("./results_test/tone_mapped/t60_-1.5.png").resize((1024, 1024))
+image_2 = load_image("./results_test/1st/t60_ev-3.png").resize((1024, 1024))
 
 kwargs = {
       # "prompt_embeds": prompt_embeds,
@@ -74,8 +74,8 @@ kwargs = {
       'strength': 0.9,
       'inpaint_kwargs': {
           'strength': 0.2,
-          'weight': 0.9,
-          'method': 'normal',
+          'weight': 0.3,
+          'method': 'iterative',
       },
       'current_seed': 1000, # we still need seed in the pipeline!
       'controlnet_conditioning_scale': 0.5,

@@ -405,8 +405,8 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
                 if t == latent2_timestep and inpaint_kwargs['method'] == 'iterative':
                     print(f'[info] latent blending: strength={inpaint_kwargs["strength"]}, weight={inpaint_kwargs["weight"]}')
                     print(latent2_timestep)
-                    weight1 = inpaint_kwargs['weight']
-                    weight2 = 1 - weight1   
+                    weight1 = 1
+                    weight2 = inpaint_kwargs['weight']
                     latents = (latents_2 * init_mask * weight1) + (latents * init_mask * weight2) + (1 - init_mask) * latents
 
                 # expand the latents if we are doing classifier free guidance
