@@ -42,7 +42,8 @@ pipe = CustomStableDiffusionXLControlNetInpaintPipeline.from_pretrained(
 
 # [t60, t68, t91]
 test_case = "t60"
-exposure = "-3"
+exposure = "0"
+
 
 img_path = "./data/strength_test/"+test_case+"/val/EV"+exposure+".png"
 mask_path = "./data/strength_test/"+test_case+"/val/mask_val.png"
@@ -59,7 +60,8 @@ control_image = load_image("./depth.png").resize((1024, 1024))
 prompt = "a clear blue sky with a few white clouds scattered around. The sunlight appears to be shining directly down in the background. The background is very very white"
 generator = torch.Generator(device="cuda")
 
-image_2 = load_image("./results_test/1st/t60_ev-3.png").resize((1024, 1024))
+image_2 = load_image(f"./results_test/2nd_matlab/t60_ev0.png").resize((1024, 1024))
+# image_2 = load_image(f"./results_test/2nd_matlab/t60_ev{exposure}.png").resize((1024, 1024))
 
 kwargs = {
       # "prompt_embeds": prompt_embeds,
@@ -71,10 +73,10 @@ kwargs = {
       'image_2': image_2, # for consistency
       'mask_image': mask_image,
       'control_image': control_image,
-      'strength': 0.9,
+      'strength': 0.95,
       'inpaint_kwargs': {
-          'strength': 0.2,
-          'weight': 0.3,
+          'strength': 0.15,
+          'weight': 0.05,
           'method': 'iterative',
       },
       'current_seed': 1000, # we still need seed in the pipeline!
