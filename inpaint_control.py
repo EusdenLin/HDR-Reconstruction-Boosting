@@ -41,56 +41,59 @@ pipe = CustomStableDiffusionXLControlNetInpaintPipeline.from_pretrained(
 #     ).to("cuda")
 
 # [t60, t68, t91]
-test_case = "t60"
-exposure = "0"
+for i in range(0, 4):
+  test_case = "t60"
+  exposure = str(-i)
 
 
-img_path = "./data/strength_test/"+test_case+"/val/EV"+exposure+".png"
-mask_path = "./data/strength_test/"+test_case+"/val/mask_val.png"
-# prompt_path = "./data/strength_test/"+test_case+"/caption.txt"
+  img_path = "./data/strength_test/"+test_case+"/val/EV"+exposure+".png"
+  # img_path = "./gen_residual.png"
+  # mask_path = "./data/strength_test/"+test_case+"/val/mask_val.png"
+  mask_path = "./mask_t60_weight_bw.png"
+  # prompt_path = "./data/strength_test/"+test_case+"/caption.txt"
 
-image = load_image(img_path).resize((1024, 1024))
-mask_image = load_image(mask_path).resize((1024, 1024))
-# depth_estimator = transformers_pipeline("depth-estimation", device=device)
-# control_image = depth_estimator(image)['depth']
-control_image = load_image("./depth.png").resize((1024, 1024))
+  image = load_image(img_path).resize((1024, 1024))
+  mask_image = load_image(mask_path).resize((1024, 1024))
+  # depth_estimator = transformers_pipeline("depth-estimation", device=device)
+  # control_image = depth_estimator(image)['depth']
+  control_image = load_image("./depth.png").resize((1024, 1024))
 
-# control_image.save(f"./test_depth.png")
+  # control_image.save(f"./test_depth.png")
 
-prompt = "a clear blue sky with a few white clouds scattered around. The sunlight appears to be shining directly down in the background. The background is very very white"
-generator = torch.Generator(device="cuda")
+  prompt = "a clear blue sky with a few white clouds scattered around. The sunlight appears to be shining directly down in the background. The background is very very white"
+  generator = torch.Generator(device="cuda")
 
-image_2 = load_image(f"./results_test/2nd_matlab/t60_ev0.png").resize((1024, 1024))
-# image_2 = load_image(f"./results_test/2nd_matlab/t60_ev{exposure}.png").resize((1024, 1024))
+  image_2 = load_image(f"./0909_gammaTMO/gamma2.2/{-i+3}.png").resize((1024, 1024))
+  # image_2 = load_image(f"./results_test/2nd_matlab/t60_ev{exposure}.png").resize((1024, 1024))
 
-kwargs = {
-      # "prompt_embeds": prompt_embeds,
-      "prompt": prompt,
-      # 'negative_prompt': args.negative_prompt,
-      'num_inference_steps': 200,
-      'generator': generator,
-      'image': image,
-      'image_2': image_2, # for consistency
-      'mask_image': mask_image,
-      'control_image': control_image,
-      'strength': 0.95,
-      'inpaint_kwargs': {
-          'strength': 0.15,
-          'weight': 0.05,
-          'method': 'iterative',
-      },
-      'current_seed': 1000, # we still need seed in the pipeline!
-      'controlnet_conditioning_scale': 0.5,
-      'height': 1024,
-      'width': 1024,
-      'guidance_scale': 5.0,
-  }
+  kwargs = {
+        # "prompt_embeds": prompt_embeds,
+        "prompt": prompt,
+        # 'negative_prompt': args.negative_prompt,
+        'num_inference_steps': 200,
+        'generator': generator,
+        'image': image,
+        'image_2': image_2, # for consistency
+        'mask_image': mask_image,
+        'control_image': control_image,
+        'strength': 0.8,
+        'inpaint_kwargs': {
+            'strength': 0.2,
+            'weight': 0.0,
+            'method': 'iterative',
+        },
+        'current_seed': 1000,
+        'controlnet_conditioning_scale': 0.5,
+        'height': 1024,
+        'width': 1024,
+        'guidance_scale': 5.0,
+    }
 
 
-image = pipe(
-  **kwargs
-).images
+  image = pipe(
+    **kwargs
+  ).images
 
-for i, img in enumerate(image):
-  # img.save(f"./data/strength_test/"+test_case+"/results/"+exposure+".png")
-  img.save(f'./test_{exposure}.png')
+  for i, img in enumerate(image):
+    # img.save(f"./data/strength_test/"+test_case+"/results/"+exposure+".png")
+    img.save(f'./0909_gammaTMO/results/{exposure}.png')
