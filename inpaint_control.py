@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from PIL import Image
 from diffusers import AutoPipelineForInpainting, ControlNetModel, AutoencoderKL, StableDiffusionXLControlNetPipeline
 from relighting.pipeline_xlinpaint import CustomStableDiffusionXLControlNetInpaintPipeline, CustomStableDiffusionControlNetInpaintPipeline
@@ -8,6 +9,15 @@ import torch
 from transformers import pipeline as transformers_pipeline 
 
 device = "cuda"
+
+img_size = (1024, 1024)
+
+target_folder = "0926_gamma_inverse"  
+# test_cases = ["t68", "t78", "t91", "t95"]
+test_cases = ["t60"]
+iteration = 2
+
+strengths = [1, 0.95, 0.6, 0.2]
 
 controlnet = ControlNetModel.from_pretrained(
     "diffusers/controlnet-depth-sdxl-1.0", 
@@ -29,71 +39,72 @@ pipe = CustomStableDiffusionXLControlNetInpaintPipeline.from_pretrained(
     **extra_kwargs,
     ).to("cuda")
 
-# controlnet = ControlNetModel.from_pretrained(
-#     "thibaud/controlnet-sd21-normalbae-diffusers",
-#     torch_dtype=torch.float16,
-# ).to(device)
+for test_case in test_cases:
+  os.makedirs(f'./{target_folder}/{test_case}/{str(iteration)}_results/', exist_ok=True)
+  # os.makedirs(f'./1016_resizetest/{test_case}/', exist_ok=True)
 
-# pipe = CustomStableDiffusionControlNetInpaintPipeline.from_pretrained(
-#     "stabilityai/stable-diffusion-2-inpainting",
-#     controlnet=controlnet,
-#     torch_dtype=torch.float16,
-#     ).to("cuda")
+  img_path = f"./{target_folder}/{test_case}/0.png"
+  image = load_image(img_path).resize(img_size)
 
-# [t60, t68, t91]
-for i in range(0, 4):
-  test_case = "t60"
-  exposure = str(-i)
+  mask_path = f"./{target_folder}/{test_case}/mask.png"
+  prompt_path = f"./{target_folder}/{test_case}/caption_cog.txt"
+  depth_path = f"./{target_folder}/{test_case}/depth.png"
 
+  # prepare mask
+  mask_image = load_image(mask_path).resize(img_size)
 
-  img_path = "./data/strength_test/"+test_case+"/val/EV"+exposure+".png"
-  # img_path = "./gen_residual.png"
-  # mask_path = "./data/strength_test/"+test_case+"/val/mask_val.png"
-  mask_path = "./mask_t60_weight_bw.png"
-  # prompt_path = "./data/strength_test/"+test_case+"/caption.txt"
+  # prepare control image
+  depth_estimator = transformers_pipeline("depth-estimation", device=device)
+  control_image = depth_estimator(image)['depth']
+  control_image.save(depth_path)
 
-  image = load_image(img_path).resize((1024, 1024))
-  mask_image = load_image(mask_path).resize((1024, 1024))
-  # depth_estimator = transformers_pipeline("depth-estimation", device=device)
-  # control_image = depth_estimator(image)['depth']
-  control_image = load_image("./depth.png").resize((1024, 1024))
+  # prepare prompt
+  with open(prompt_path, "r") as f:
+    prompt = f.read()
+  prompt = "a clear blue sky with a few white clouds scattered around. The sunlight appears to be shining directly down in the background. The background is very very bright"
 
-  # control_image.save(f"./test_depth.png")
+  
+  for i in range(0, 4):
+    generator = torch.Generator(device="cuda")
+    exposure = str(-i)
+    if iteration == 1:
+      img_path = f"./{target_folder}/{test_case}/{exposure}.png"
+    else:
+      img_path = f"./{target_folder}/{test_case}/{str(iteration-1)}_tone_mapped_residual/{exposure}.png"
 
-  prompt = "a clear blue sky with a few white clouds scattered around. The sunlight appears to be shining directly down in the background. The background is very very white"
-  generator = torch.Generator(device="cuda")
+    image = load_image(img_path).resize(img_size)
+    image_2 = load_image(img_path).resize(img_size)
+    # image_2 = load_image(f"./{target_folder}/tone_mapped/{test_case}/{exposure}.png").resize((1024, 1024))
 
-  image_2 = load_image(f"./0909_gammaTMO/gamma2.2/{-i+3}.png").resize((1024, 1024))
-  # image_2 = load_image(f"./results_test/2nd_matlab/t60_ev{exposure}.png").resize((1024, 1024))
+    kwargs = {
+          # "prompt_embeds": prompt_embeds,
+          "prompt": prompt,
+          # 'negative_prompt': args.negative_prompt,
+          'num_inference_steps': 1000,
+          'generator': generator,
+          'image': image,
+          'image_2': image_2, # for consistency
+          'mask_image': mask_image,
+          'control_image': control_image,
+          'strength': strengths[iteration],
+          'inpaint_kwargs': {
+              'strength': 0.1,
+              'weight': 0.3,
+              'method': 'normal',
+              'filter': False,
+          },
+          'current_seed': 1000,
+          'controlnet_conditioning_scale': 0.5,
+          'height': 1024,
+          'width': 1024,
+          'guidance_scale': 5.0,
+      }
 
-  kwargs = {
-        # "prompt_embeds": prompt_embeds,
-        "prompt": prompt,
-        # 'negative_prompt': args.negative_prompt,
-        'num_inference_steps': 200,
-        'generator': generator,
-        'image': image,
-        'image_2': image_2, # for consistency
-        'mask_image': mask_image,
-        'control_image': control_image,
-        'strength': 0.8,
-        'inpaint_kwargs': {
-            'strength': 0.2,
-            'weight': 0.0,
-            'method': 'iterative',
-        },
-        'current_seed': 1000,
-        'controlnet_conditioning_scale': 0.5,
-        'height': 1024,
-        'width': 1024,
-        'guidance_scale': 5.0,
-    }
+    with torch.no_grad():
+      image = pipe(
+        **kwargs
+      ).images
 
-
-  image = pipe(
-    **kwargs
-  ).images
-
-  for i, img in enumerate(image):
-    # img.save(f"./data/strength_test/"+test_case+"/results/"+exposure+".png")
-    img.save(f'./0909_gammaTMO/results/{exposure}.png')
+    for i, img in enumerate(image):
+      img.save(f'./{target_folder}/{test_case}/{str(iteration)}_results/{exposure}.png')
+      # img.save(f'./1016_resizetest/{test_case}/{exposure}.png')

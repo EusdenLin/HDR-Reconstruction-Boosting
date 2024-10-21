@@ -1,6 +1,7 @@
 import torch
+import torch.nn.functional as F
 from typing import List, Union, Dict, Any, Callable, Optional, Tuple
-
+import cv2
 from diffusers.utils.torch_utils import is_compiled_module
 from diffusers.models import ControlNetModel
 from diffusers.pipelines.controlnet import MultiControlNetModel
@@ -271,6 +272,7 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             is_strength_max=is_strength_max,
             return_noise=True,
             return_image_latents=return_image_latents,
+            # current_seed=current_seed,
         )
 
         if return_image_latents:
@@ -293,6 +295,7 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             is_strength_max=is_strength_max_2,
             return_noise=True,
             return_image_latents=return_image_latents,
+            # current_seed=current_seed,
         )
 
         if return_image_latents:
@@ -500,7 +503,66 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
                             init_latents_proper, noise, torch.tensor([noise_timestep])
                         )
 
-                    latents = (1 - init_mask) * init_latents_proper + init_mask * latents
+
+                # # laplacian filtering
+                # Helper function to create a 2D Gaussian kernel
+                    def gaussian_kernel(kernel_size=5, sigma=1.0, dtype=torch.float32, device='cpu'):
+                        x = torch.arange(kernel_size, dtype=dtype, device=device) - (kernel_size - 1) / 2.0
+                        gauss = torch.exp(-x.pow(2) / (2 * sigma ** 2))
+                        gauss = gauss / gauss.sum()
+                        kernel = gauss.unsqueeze(0) @ gauss.unsqueeze(1)  # Outer product to create 2D kernel
+                        return kernel.unsqueeze(0).unsqueeze(0)  # Shape: (1, 1, kernel_size, kernel_size)
+
+                    # Gaussian blur using 2D convolution
+                    def gaussian_blur(img, kernel_size=5, sigma=1.0):
+                        channels = img.shape[1]
+                        dtype = img.dtype  # Get the data type of the input image (e.g., float16 or float32)
+                        device = img.device  # Get the device (CPU or GPU)
+                        
+                        # Create the kernel with matching dtype and device
+                        kernel = gaussian_kernel(kernel_size, sigma, dtype=dtype, device=device)
+                        kernel = kernel.repeat(channels, 1, 1, 1)  # Shape: (channels, 1, kernel_size, kernel_size)
+                        
+                        # Apply the convolution (blur)
+                        return F.conv2d(img, kernel, padding=kernel_size // 2, groups=channels)
+
+                    # Downsample (similar to cv2.pyrDown)
+                    def downsample(img, scale_factor=0.5):
+                        return F.interpolate(img, scale_factor=scale_factor, mode='bilinear', align_corners=False)
+
+                    # Upsample (similar to cv2.pyrUp)
+                    def upsample(img, size):
+                        return F.interpolate(img, size=size, mode='bilinear', align_corners=False)
+
+                    # Example latent tensor with shape (1, 3, 64, 64)
+                    if inpaint_kwargs['filter']:
+                        # Laplacian pyramid parameters
+                        num_levels = 3
+
+                        # Gaussian pyramid (smooth progressively)
+                        gaussian_pyramid = [latents]
+                        for i in range(num_levels):
+                            blurred = gaussian_blur(gaussian_pyramid[-1], kernel_size=5, sigma=1.0)
+                            downsampled = downsample(blurred)
+                            gaussian_pyramid.append(downsampled)
+
+                        # Laplacian pyramid (compute high-frequency details)
+                        laplacian_pyramid = []
+                        for i in range(num_levels):
+                            upsampled = upsample(gaussian_pyramid[i + 1], size=gaussian_pyramid[i].shape[2:])
+                            laplacian = gaussian_pyramid[i] - upsampled  # High-frequency details
+                            laplacian_pyramid.append(laplacian)
+
+                        # Remove high-frequency components by setting the finest level to zero
+                        laplacian_pyramid[0] = torch.zeros_like(laplacian_pyramid[0])
+
+                        # Reconstruct the image by adding back the Laplacian levels
+                        reconstructed = gaussian_pyramid[num_levels]
+                        for i in range(num_levels - 1, -1, -1):
+                            upsampled = upsample(reconstructed, size=laplacian_pyramid[i].shape[2:])
+                            reconstructed = upsampled + laplacian_pyramid[i]
+
+                        latents = (1 - init_mask) * init_latents_proper + init_mask * reconstructed
 
                 # call the callback, if provided
                 if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0):

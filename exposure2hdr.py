@@ -16,6 +16,7 @@ def create_argparser():
     parser.add_argument("--endwith", type=str, default=".png" ,help='file ending to filter out unwant image')
     parser.add_argument("--ev_string", type=str, default="_ev" ,help='string that use for search ev value')
     parser.add_argument("--EV", type=str, default="0, -1, -2, -3" ,help='avalible ev value')
+    parser.add_argument("--iteration", default='1st', help="iteration", type=str)
     parser.add_argument("--gamma", default=2.4, help="Gamma value", type=float)
     parser.add_argument('--preview_output', dest='preview_output', action='store_true')
     parser.set_defaults(preview_output=True)
@@ -25,7 +26,6 @@ def parse_filename(ev_string, endwith,filename):
     a = filename.split(ev_string)
     name = ev_string.join(a[:-1])
     ev = a[-1].replace(endwith, "")
-    print(ev)
     ev = int(ev)
     return {
         'name': name,
@@ -69,18 +69,18 @@ def process_image(args, info):
         # compute luminace
         lumi = linear_img @ scaler
         luminances.append(lumi)
-        print(evs[i])
         
     # start from darkest image
     out_luminace = luminances[len(evs) - 1]
 
-    # for i in range(len(evs) - 1, 0, -1):
-    #     # compute mask
-    #     maxval = 1 / (2 ** evs[i-1])
-    #     p1 = np.clip((luminances[i-1] - 0.9 * maxval) / (0.1 * maxval), 0, 1)
-    #     p2 = out_luminace > luminances[i-1]
-    #     mask = (p1 * p2).astype(np.float32)
-    #     out_luminace = luminances[i-1] * (1-mask) + out_luminace * mask
+    for i in range(len(evs) - 1, 0, -1):
+        # compute mask
+        maxval = 1 / (2 ** evs[i-1])
+        p1 = np.clip((luminances[i-1] - 0.9 * maxval) / (0.1 * maxval), 0, 1)
+        p2 = out_luminace > luminances[i-1]
+        mask = (p1 * p2).astype(np.float32)
+        # out_luminace = luminances[i-1] * (1-mask) + out_luminace * mask
+        out_luminace = out_luminace
         
     hdr_rgb = image0_linear * (out_luminace / (luminances[0] + 1e-10))[:, :, np.newaxis]
     
@@ -89,19 +89,21 @@ def process_image(args, info):
     
     
     ldr_rgb, _, _ = hdr2ldr(hdr_rgb)
-    skimage.io.imsave(os.path.join(hdrdir, "tonemapped.png"), skimage.img_as_ubyte(ldr_rgb))
     
-    ezexr.imwrite(os.path.join(hdrdir, name+".exr"), hdr_rgb.astype(np.float32))
     if args.preview_output:
-        preview_dir = os.path.join(args.output_dir, "preview")
+        preview_dir = os.path.join(args.output_dir, args.iteration + "_tone_mapped")
         os.makedirs(preview_dir, exist_ok=True)
+
+        skimage.io.imsave(os.path.join(preview_dir, "tonemapped.png"), skimage.img_as_ubyte(ldr_rgb))
+        # ezexr.imwrite(os.path.join(preview_dir, name+".exr"), hdr_rgb.astype(np.float32))
+        
         bracket = []
-        for s, num in zip(2 ** np.linspace(0, evs[-1], 7), np.linspace(0, evs[-1], 7)): #evs[-1] is -5
+        for s, num in zip(2 ** np.linspace(0, evs[-1], 4), np.linspace(0, evs[-1], 4)): #evs[-1] is -5
             lumi = np.clip((s * hdr_rgb) ** (1/args.gamma), 0, 1)
-            skimage.io.imsave(os.path.join(preview_dir, name+f"_{num}.png"), skimage.img_as_ubyte(lumi))
+            skimage.io.imsave(os.path.join(preview_dir, f"{int(num)}.png"), skimage.img_as_ubyte(lumi))
             bracket.append(lumi)
         bracket = np.concatenate(bracket, axis=1)
-        skimage.io.imsave(os.path.join(preview_dir, name+".png"), skimage.img_as_ubyte(bracket))
+        # skimage.io.imsave(os.path.join(preview_dir, name+".png"), skimage.img_as_ubyte(bracket))
     return None
 
 def main():
@@ -132,6 +134,7 @@ def main():
             print("WARNING: missing ev in ", k)
             continue
         # convert to list data
+        print(k, info[k])
         infolist.append({'name': k, 'ev': info[k]})
 
     process_image(args, infolist[0])

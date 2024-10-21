@@ -26,14 +26,15 @@ model = model.eval()
 # for n, p in model.named_parameters():
 #     print(f"{n}: {p.device}")
 
-path = 'data/VDS/'
+# path = 'data/VDS/'
+path = './0918_multi_cases/'
 
 # chat example
-query = 'Describe the bright part of the image. As detailed as possible.'
+query = 'Describe the over-exposed region in the image. Focus on the characteristics such as brightness, color loss, and any patterns or textures that are visible despite the overexposure. What objects or elements are present in this area, and how does the over-exposure affect their appearance? Describe in one sentence.'
 for folder in os.listdir(path):
     if folder == 'grid_test':
         continue
-    image = Image.open(f'{path}{folder}/{folder}_0EV_true.jpg.png').convert('RGB')
+    image = Image.open(f'{path}{folder}/EV0.png').convert('RGB')
     inputs = model.build_conversation_input_ids(tokenizer, query=query, history=[], images=[image])  # chat mode
     inputs = {
         'input_ids': inputs['input_ids'].unsqueeze(0).to('cuda'),
