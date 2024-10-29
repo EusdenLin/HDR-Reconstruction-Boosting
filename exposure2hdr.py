@@ -17,7 +17,7 @@ def create_argparser():
     parser.add_argument("--ev_string", type=str, default="_ev" ,help='string that use for search ev value')
     parser.add_argument("--EV", type=str, default="0, -1, -2, -3" ,help='avalible ev value')
     parser.add_argument("--iteration", default='1st', help="iteration", type=str)
-    parser.add_argument("--gamma", default=2.4, help="Gamma value", type=float)
+    parser.add_argument("--gamma", default=2.2, help="Gamma value", type=float)
     parser.add_argument('--preview_output', dest='preview_output', action='store_true')
     parser.set_defaults(preview_output=True)
     return parser

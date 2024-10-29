@@ -71,7 +71,8 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
     ):
         # OVERWRITE METHODS
         self.prepare_mask_latents = custom_prepare_mask_latents.__get__(self, CustomStableDiffusionXLControlNetInpaintPipeline)
-        # self.prepare_latents = custom_prepare_latents.__get__(self, CustomStableDiffusionXLControlNetInpaintPipeline)
+        if inpaint_kwargs['another_seed']:
+            self.prepare_latents = custom_prepare_latents.__get__(self, CustomStableDiffusionXLControlNetInpaintPipeline)
 
         controlnet = self.controlnet._orig_mod if is_compiled_module(self.controlnet) else self.controlnet
 
@@ -258,22 +259,40 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
         return_image_latents = num_channels_unet == 4
 
         add_noise = True if denoising_start is None else False
-        latents_outputs = self.prepare_latents(
-            batch_size * num_images_per_prompt,
-            num_channels_latents,
-            height,
-            width,
-            prompt_embeds.dtype,
-            device,
-            generator,
-            latents,
-            image=init_image,
-            timestep=latent_timestep,
-            is_strength_max=is_strength_max,
-            return_noise=True,
-            return_image_latents=return_image_latents,
-            # current_seed=current_seed,
-        )
+        print(current_seed, inpaint_kwargs['another_seed'])
+        if inpaint_kwargs['another_seed']:
+            latents_outputs = self.prepare_latents(
+                batch_size * num_images_per_prompt,
+                num_channels_latents,
+                height,
+                width,
+                prompt_embeds.dtype,
+                device,
+                generator,
+                latents,
+                image=init_image,
+                timestep=latent_timestep,
+                is_strength_max=is_strength_max,
+                return_noise=True,
+                return_image_latents=return_image_latents,
+                current_seed=current_seed,
+            )
+        else:
+            latents_outputs = self.prepare_latents(
+                batch_size * num_images_per_prompt,
+                num_channels_latents,
+                height,
+                width,
+                prompt_embeds.dtype,
+                device,
+                generator,
+                latents,
+                image=init_image,
+                timestep=latent_timestep,
+                is_strength_max=is_strength_max,
+                return_noise=True,
+                return_image_latents=return_image_latents,
+            )
 
         if return_image_latents:
             latents, noise, image_latents = latents_outputs
@@ -281,22 +300,39 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             latents, noise = latents_outputs
 
         # 6.1 Prepare consistency latents
-        latents_outputs_2 = self.prepare_latents(
-            batch_size * num_images_per_prompt,
-            num_channels_latents,
-            height,
-            width,
-            prompt_embeds.dtype,
-            device,
-            generator,
-            None,
-            image=init_image_2,
-            timestep=latent2_timestep,
-            is_strength_max=is_strength_max_2,
-            return_noise=True,
-            return_image_latents=return_image_latents,
-            # current_seed=current_seed,
-        )
+        if inpaint_kwargs['another_seed']:
+            latents_outputs_2 = self.prepare_latents(
+                batch_size * num_images_per_prompt,
+                num_channels_latents,
+                height,
+                width,
+                prompt_embeds.dtype,
+                device,
+                generator,
+                None,
+                image=init_image_2,
+                timestep=latent2_timestep,
+                is_strength_max=is_strength_max_2,
+                return_noise=True,
+                return_image_latents=return_image_latents,
+                current_seed=current_seed,
+            )
+        else:
+            latents_outputs_2 = self.prepare_latents(
+                batch_size * num_images_per_prompt,
+                num_channels_latents,
+                height,
+                width,
+                prompt_embeds.dtype,
+                device,
+                generator,
+                None,
+                image=init_image_2,
+                timestep=latent2_timestep,
+                is_strength_max=is_strength_max_2,
+                return_noise=True,
+                return_image_latents=return_image_latents,
+            )
 
         if return_image_latents:
             latents_2, noise_2, image_latents_2 = latents_outputs_2
@@ -503,6 +539,7 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
                             init_latents_proper, noise, torch.tensor([noise_timestep])
                         )
 
+                    latents = (1 - init_mask) * init_latents_proper + init_mask * latents
 
                 # # laplacian filtering
                 # Helper function to create a 2D Gaussian kernel
