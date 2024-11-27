@@ -7,3 +7,7 @@ test_control_new/
 test_no_control/
 DiffusionLight-LoRA-Trainer/
 test*
+1111_evaluation/
+utils/depth_pro/
+checkpoints/
+11*/

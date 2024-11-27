@@ -1,6 +1,7 @@
 # covnert exposure bracket to HDR output
 import argparse 
 import os 
+import cv2
 from functools import partial
 from multiprocessing import Pool
 from tqdm import tqdm
@@ -46,6 +47,28 @@ def process_image(args, info):
 
     # filename
     files = [info['ev'][e] for e in evs]
+
+    # weights = []
+    # for ev in evs:
+    #     weight = 1 / (2 ** abs(ev))
+    #     weights.append(weight)
+    # weights = np.array(weights)
+    # weights /= weights.sum()  # Normalize weights
+    # print(evs, weights)
+
+    # images = []
+    # for file in files:
+    #     path = os.path.join(args.input_dir, file)
+    #     img = skimage.io.imread(path)[...,:3]
+    #     img = skimage.img_as_float(img)
+    #     linear_img = np.power(img, args.gamma)
+    #     linear_img *= 1 / (2 ** evs[files.index(file)])
+
+    #     images.append(linear_img)
+
+    # hdr_rgb = np.zeros_like(images[0], dtype=np.float32)
+    # for img, weight in zip(images, weights):
+    #     hdr_rgb += img * weight
     
     # inital first image
     image0 = skimage.io.imread(os.path.join(args.input_dir, files[0]))[...,:3]
@@ -68,22 +91,25 @@ def process_image(args, info):
         
         # compute luminace
         lumi = linear_img @ scaler
-        luminances.append(lumi)
+        # breakpoint()
+        luminances.append(linear_img)
         
+    print(luminances[0].shape, len(luminances))
     # start from darkest image
     out_luminace = luminances[len(evs) - 1]
 
-    for i in range(len(evs) - 1, 0, -1):
-        # compute mask
-        maxval = 1 / (2 ** evs[i-1])
-        p1 = np.clip((luminances[i-1] - 0.9 * maxval) / (0.1 * maxval), 0, 1)
-        p2 = out_luminace > luminances[i-1]
-        mask = (p1 * p2).astype(np.float32)
-        # out_luminace = luminances[i-1] * (1-mask) + out_luminace * mask
-        out_luminace = out_luminace
+    # for i in range(len(evs) - 1, 0, -1):
+    #     # compute mask
+    #     maxval = 1 / (2 ** evs[i-1])
+    #     p1 = np.clip((luminances[i-1] - 0.9 * maxval) / (0.1 * maxval), 0, 1)
+    #     p2 = out_luminace > luminances[i-1]
+    #     mask = (p1 * p2).astype(np.float32)
+    #     # out_luminace = luminances[i-1] * (1-mask) + out_luminace * mask
+    #     out_luminace = out_luminace
         
-    hdr_rgb = image0_linear * (out_luminace / (luminances[0] + 1e-10))[:, :, np.newaxis]
+    hdr_rgb = image0_linear * (out_luminace / (luminances[0] + 1e-10))
     
+    print(hdr_rgb.shape)
     # tone map for visualization    
     hdr2ldr = TonemapHDR(gamma=args.gamma, percentile=99, max_mapping=0.9)
     
@@ -95,7 +121,7 @@ def process_image(args, info):
         os.makedirs(preview_dir, exist_ok=True)
 
         skimage.io.imsave(os.path.join(preview_dir, "tonemapped.png"), skimage.img_as_ubyte(ldr_rgb))
-        # ezexr.imwrite(os.path.join(preview_dir, name+".exr"), hdr_rgb.astype(np.float32))
+        ezexr.imwrite(os.path.join(preview_dir, "hdr.exr"), hdr_rgb.astype(np.float32))
         
         bracket = []
         for s, num in zip(2 ** np.linspace(0, evs[-1], 4), np.linspace(0, evs[-1], 4)): #evs[-1] is -5

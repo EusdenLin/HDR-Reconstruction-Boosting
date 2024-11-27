@@ -259,7 +259,7 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
         return_image_latents = num_channels_unet == 4
 
         add_noise = True if denoising_start is None else False
-        print(current_seed, inpaint_kwargs['another_seed'])
+        # print(current_seed, inpaint_kwargs['another_seed'])
         if inpaint_kwargs['another_seed']:
             latents_outputs = self.prepare_latents(
                 batch_size * num_images_per_prompt,

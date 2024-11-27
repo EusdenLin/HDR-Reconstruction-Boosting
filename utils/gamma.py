@@ -1,4 +1,5 @@
 import cv2
+import os
 import numpy as np
 
 def adjust_exposure(image, exposure_factor):
@@ -24,12 +25,13 @@ def adjust_exposure(image, exposure_factor):
 
 # Load the image
 
-cases = ["t68", "t78", "t91", "t95"]
+# cases = ["t68", "t78", "t91", "t95"]
+cases = os.listdir("./1111_evaluation/")
 for case in cases:
-    image = cv2.imread(f'./0926_gamma_inverse/{case}/0.png')    
+    image = cv2.imread(f'./1111_evaluation/{case}/0.png')    
     for i in range(0, 4):
         exposure = str(-i)
-        img_path = f"./0926_gamma_inverse/{case}/{exposure}.png"
+        img_path = f"./1111_evaluation/{case}/{exposure}.png"
 
         # Set the desired exposure factor (e.g., 1.5 for +1.5 stops)
         exposure_factor = pow(2, -i)
@@ -37,10 +39,10 @@ for case in cases:
         adjusted_image = adjust_exposure(image, exposure_factor)
 
         # Save or display the adjusted image
-        cv2.imwrite(img_path, adjusted_image)
+        cv2.imwrite(img_path, cv2.resize(adjusted_image, (1024, 1024)))
 
         exposure = str(i)
-        img_path = f"./0926_gamma_inverse/{case}/{exposure}.png"
+        img_path = f"./1111_evaluation/{case}/{exposure}.png"
 
         # Set the desired exposure factor (e.g., 1.5 for +1.5 stops)
         exposure_factor = pow(2, i)
@@ -48,4 +50,4 @@ for case in cases:
         adjusted_image = adjust_exposure(image, exposure_factor)
 
         # Save or display the adjusted image
-        cv2.imwrite(img_path, adjusted_image)
+        cv2.imwrite(img_path, cv2.resize(adjusted_image, (1024, 1024)))

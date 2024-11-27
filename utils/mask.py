@@ -1,4 +1,5 @@
 import cv2
+import os
 import numpy as np
 
 def load_image(path):
@@ -18,12 +19,12 @@ def save_image(image, path):
 
 def main():
     # test_case = ["t60", "t68", "t82"]
-    test_case = ["t60", "t68", "t78", "t91", "t95"]
+    test_case = os.listdir("./1111_evaluation/")
     for case in test_case:
-        image = load_image(f"./0918_multi_cases/{case}/EV0.png")
+        image = load_image(f"./1111_evaluation/{case}/0.png")
         mask = create_mask(image)
         mask = cv2.resize(mask, (1024, 1024))
-        save_image(mask, f"./0918_multi_cases/{case}/mask.png")
+        save_image(mask, f"./1111_evaluation/{case}/mask.png")
 
 if __name__ == "__main__":
     main()

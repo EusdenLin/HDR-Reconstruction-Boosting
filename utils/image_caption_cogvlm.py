@@ -1,5 +1,5 @@
 import torch
-import requests
+import re
 from PIL import Image
 from transformers import AutoModelForCausalLM, LlamaTokenizer
 from accelerate import init_empty_weights, infer_auto_device_map, load_checkpoint_and_dispatch
@@ -27,14 +27,22 @@ model = model.eval()
 #     print(f"{n}: {p.device}")
 
 # path = 'data/VDS/'
-path = './0918_multi_cases/'
+path = './1111_evaluation/'
+
+def extract_or_keep(text):
+    # Try to find text within single quotes
+    matches = re.findall(r"'(.*?)'", text)
+    if matches:
+        return matches[0]  # Returns a list of all matches if found
+    else:
+        return text   # Returns the entire string if no matches are found
 
 # chat example
-query = 'Describe the over-exposed region in the image. Focus on the characteristics such as brightness, color loss, and any patterns or textures that are visible despite the overexposure. What objects or elements are present in this area, and how does the over-exposure affect their appearance? Describe in one sentence.'
+query = 'Imagine the details in the over-exposed region. Please make it short and concise and makes sense. Start with "A photo of bright".'
 for folder in os.listdir(path):
     if folder == 'grid_test':
         continue
-    image = Image.open(f'{path}{folder}/EV0.png').convert('RGB')
+    image = Image.open(f'{path}{folder}/0.png').convert('RGB')
     inputs = model.build_conversation_input_ids(tokenizer, query=query, history=[], images=[image])  # chat mode
     inputs = {
         'input_ids': inputs['input_ids'].unsqueeze(0).to('cuda'),
@@ -49,4 +57,5 @@ for folder in os.listdir(path):
         outputs = outputs[:, inputs['input_ids'].shape[1]:]
         print(tokenizer.decode(outputs[0]))
         with open(f'{path}{folder}/caption_cog.txt', 'w') as f:
-            f.write(tokenizer.decode(outputs[0]).replace('<s>', '').replace('</s>', '').strip())
+            f.write(extract_or_keep(tokenizer.decode(outputs[0]).replace('<s>', '').replace('</s>', '').strip()))
+            print(extract_or_keep(tokenizer.decode(outputs[0]).replace('<s>', '').replace('</s>', '').strip()))
