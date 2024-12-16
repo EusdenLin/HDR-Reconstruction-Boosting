@@ -17,7 +17,7 @@ def create_argparser():
     parser.add_argument("--endwith", type=str, default=".png" ,help='file ending to filter out unwant image')
     parser.add_argument("--ev_string", type=str, default="_ev" ,help='string that use for search ev value')
     parser.add_argument("--EV", type=str, default="0, -1, -2, -3" ,help='avalible ev value')
-    parser.add_argument("--iteration", default='1st', help="iteration", type=str)
+    parser.add_argument("--iteration", default='', help="iteration", type=str)
     parser.add_argument("--gamma", default=2.2, help="Gamma value", type=float)
     parser.add_argument('--preview_output', dest='preview_output', action='store_true')
     parser.set_defaults(preview_output=True)
@@ -94,7 +94,7 @@ def process_image(args, info):
         # breakpoint()
         luminances.append(linear_img)
         
-    print(luminances[0].shape, len(luminances))
+    # print(luminances[0].shape, len(luminances))
     # start from darkest image
     out_luminace = luminances[len(evs) - 1]
 
@@ -109,7 +109,7 @@ def process_image(args, info):
         
     hdr_rgb = image0_linear * (out_luminace / (luminances[0] + 1e-10))
     
-    print(hdr_rgb.shape)
+    # print(hdr_rgb.shape)
     # tone map for visualization    
     hdr2ldr = TonemapHDR(gamma=args.gamma, percentile=99, max_mapping=0.9)
     

@@ -6,7 +6,7 @@ import random
 from PIL import Image
 from diffusers import AutoPipelineForInpainting, ControlNetModel, AutoencoderKL, StableDiffusionXLControlNetPipeline
 from relighting.pipeline_xlinpaint import CustomStableDiffusionXLControlNetInpaintPipeline, CustomStableDiffusionControlNetInpaintPipeline
-
+import cv2
 from diffusers.utils import load_image
 import torch
 from transformers import pipeline as transformers_pipeline 
@@ -15,13 +15,13 @@ device = "cuda"
 
 img_size = (1024, 1024)
 
-# target_folder = "1111_evaluation"  
-target_folder = "1119_diversity"  
+target_folder = "1111_evaluation"  
+# target_folder = "1119_diversity"  
 # output_folder = "1111_evaluation"
-output_folder = "1119_diversity"
-# test_cases = None
-test_cases = ["t60"]
-iterations = 4
+output_folder = "1211_SDEdit"
+test_cases = None
+# test_cases = ["t68"]
+iterations = 1
 
 strengths = [1, 0.95, 0.95, 0.95, 0.95]
 
@@ -71,12 +71,15 @@ for test_case in test_cases:
   # prepare prompt
   with open(prompt_path, "r") as f:
     prompt = f.read()
-  prompt = "a photo of clear sky with a few white clouds scattered around. The background is very very bright"
+  prompt = "a photo of shiny sky with a few white clouds scattered around. The background is very very bright"
+  negative_prompt = "ugly, dark, bad, terrible, awful, horrible, disgusting, gross, nasty, unattractive, unpleasant, repulsive, revolting, vile, foul, abhorrent, loathsome, hideous, unsightly, unlovely, unpleasing, unappealing, uninviting, unwelcome, unattractive, unprepossessing, uncomely, unbeautiful"
 
   for iteration in range(1, iterations+1):
     os.makedirs(f'./{output_folder}/{test_case}/{str(iteration)}_results/', exist_ok=True)
     generator = torch.Generator(device="cuda")
     seed = random.randint(0, 1000000)
+
+    print(seed)
 
     for i in range(0, 4):
       generator = torch.Generator(device="cuda")
@@ -94,11 +97,14 @@ for test_case in test_cases:
       image = load_image(img_path).resize(img_size)
       image_2 = load_image(img_path).resize(img_size)
       # image_2 = load_image(f"./{target_folder}/tone_mapped/{test_case}/{exposure}.png").resize((1024, 1024))
+      if i == 0:
+        image.save(f'./{output_folder}/{test_case}/{str(iteration)}_results/{exposure}.png')
+        continue
 
       kwargs = {
             # "prompt_embeds": prompt_embeds,
             "prompt": prompt,
-            # 'negative_prompt': args.negative_prompt,
+            'negative_prompt': negative_prompt,
             'num_inference_steps': 50,
             'generator': generator,
             'image': image,
@@ -143,45 +149,45 @@ for test_case in test_cases:
     subprocess.run(command)
 
     # Residual
-    os.makedirs(f'./{output_folder}/{test_case}/{iteration}_tone_mapped_residual/', exist_ok=True)
-    for i in range(-3, 1):
-        # Load the image
-        image = cv2.imread(f'./{output_folder}/{test_case}/{iteration}_tone_mapped/{str(i)}.png').astype(np.float32)
-        cevr = cv2.imread(f'./{output_folder}/{test_case}/{str(i)}.png').astype(np.float32)
-        mask = cv2.imread(f'./{output_folder}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
+    # os.makedirs(f'./{output_folder}/{test_case}/{iteration}_tone_mapped_residual/', exist_ok=True)
+    # for i in range(-3, 1):
+    #     # Load the image
+    #     image = cv2.imread(f'./{output_folder}/{test_case}/{iteration}_tone_mapped/{str(i)}.png').astype(np.float32)
+    #     cevr = cv2.imread(f'./{output_folder}/{test_case}/{str(i)}.png').astype(np.float32)
+    #     mask = cv2.imread(f'./{output_folder}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
 
-        cevr = cv2.resize(cevr, (1024, 1024))
+    #     cevr = cv2.resize(cevr, (1024, 1024))
 
-        # Convert the image from BGR to YUV color space
-        yuv_image = cv2.cvtColor(image, cv2.COLOR_BGR2YUV)
-        yuv_cevr = cv2.cvtColor(cevr, cv2.COLOR_BGR2YUV)
+    #     # Convert the image from BGR to YUV color space
+    #     yuv_image = cv2.cvtColor(image, cv2.COLOR_BGR2YUV)
+    #     yuv_cevr = cv2.cvtColor(cevr, cv2.COLOR_BGR2YUV)
 
-        # Split the YUV channels
-        Y1, U1, V1 = cv2.split(yuv_image)
-        Y2, U2, V2 = cv2.split(yuv_cevr)
+    #     # Split the YUV channels
+    #     Y1, U1, V1 = cv2.split(yuv_image)
+    #     Y2, U2, V2 = cv2.split(yuv_cevr)
 
-        residual = np.zeros(Y1.shape, dtype=np.float32)
-        residual[Y1 < Y2] = Y2[Y1 < Y2] - Y1[Y1 < Y2]
-        residual = cv2.bitwise_and(residual, residual, mask=mask)
+    #     residual = np.zeros(Y1.shape, dtype=np.float32)
+    #     residual[Y1 < Y2] = Y2[Y1 < Y2] - Y1[Y1 < Y2]
+    #     residual = cv2.bitwise_and(residual, residual, mask=mask)
 
-        Y1_com = cv2.add(Y1, residual*2)
-        Y1_com = np.clip(Y1_com, 0, 255)
+    #     Y1_com = cv2.add(Y1, residual*2)
+    #     Y1_com = np.clip(Y1_com, 0, 255)
 
-        cv2.imwrite(f'./{output_folder}/{test_case}/{iteration}_tone_mapped_residual/residual_{str(i)}.png', residual*10)
+    #     cv2.imwrite(f'./{output_folder}/{test_case}/{iteration}_tone_mapped_residual/residual_{str(i)}.png', residual*10)
 
-        # Merge the channels back together
-        yuv_image = cv2.merge([Y1_com, U1, V1])
+    #     # Merge the channels back together
+    #     yuv_image = cv2.merge([Y1_com, U1, V1])
 
-        # Convert the image back to BGR color space
-        output_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2BGR)
+    #     # Convert the image back to BGR color space
+    #     output_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2BGR)
 
-        # Save or display the modified image
-        cv2.imwrite(f'./{output_folder}/{test_case}/{iteration}_tone_mapped_residual/{str(i)}.png', output_image)
+    #     # Save or display the modified image
+    #     cv2.imwrite(f'./{output_folder}/{test_case}/{iteration}_tone_mapped_residual/{str(i)}.png', output_image)
 
-        # breakpoint()
+    #     # breakpoint()
         
-        new_mask = np.clip((Y1 < Y2) * (mask.reshape(1024, 1024)/255) * 255, 0, 255).astype(np.uint8)    
-        # new_mask = cv2.bitwise_and(new_mask, mask, mask=residual)
+    #     new_mask = np.clip((Y1 < Y2) * (mask.reshape(1024, 1024)/255) * 255, 0, 255).astype(np.uint8)    
+    #     # new_mask = cv2.bitwise_and(new_mask, mask, mask=residual)
 
-        cv2.imwrite(f'./{output_folder}/{test_case}/{iteration}_tone_mapped_residual/mask_{str(i)}.png', new_mask)
+    #     cv2.imwrite(f'./{output_folder}/{test_case}/{iteration}_tone_mapped_residual/mask_{str(i)}.png', new_mask)
     

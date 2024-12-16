@@ -11,3 +11,8 @@ test*
 utils/depth_pro/
 checkpoints/
 11*/
+12*/
+evaluation_*/
+HDREye/
+CEVR/
+*.png/
