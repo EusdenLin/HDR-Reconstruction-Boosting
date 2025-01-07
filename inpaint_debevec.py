@@ -18,18 +18,21 @@ import matplotlib.pyplot as plt
 
 device = "cuda"
 img_size = (1024, 1024)
-results_folder = "results"
-method = "CEVR"
-data_folder = "data"
-output_folder = "results_intermediate"
+# results_folder = "results_HDReye"
+results_folder = "results_HDReye"
+method = "Deep_Recursive_HDRI"
+data_folder = "data_HDReye"
+output_folder = "results_intermediate_HDReye"
+# data_folder = "data_HDReye"
+# output_folder = "results_intermediate_HDReye"
 
 # test_cases = ['t81', 't12', 't44', 't71', 't24', 't31', 't13', 't25', 't35', 't69', 't59', 't57', 't4', 't21', 't7', 't38', 't76', 't15', 't30', 't48', 't52', 't1', 't33', 't23', 't37', 't85', 't17', 't82', 't92', 't78', 't6', 't26', 't51', 't41', 't45', 't62', 't65', 't91', 't53', 't87', 't63', 't84', 't39', 't16', 't9', 't90', 't70', 't14', 't83', 't10', 't40', 't32', 't29', 't61', 't46', 't89', 't22', 't2', 't56', 't50', 't74', 't60', 't64', 't47', 't66', 't68', 't55', 't94', 't79', 't72', 't42', 't18', 't54', 't49', 't77', 't43']
-# test_cases = ['t81', 't3', 't24', 't13', 't25', 't69', 't7', 't38', 't15', 't5', 't48', 't80', 't28', 't82', 't78', 't73', 't65', 't91', 't11', 't8', 't27', 't9', 't75', 't29', 't46', 't22', 't50', 't60', 't47', 't66', 't68', 't49', 't34', 't77'] 
-test_cases = ['t81', 't24', 't13', 't25', 't69', 't20', 't21', 't7', 't48', 't80', 't86', 't1', 't28', 't82', 't73', 't65', 't91', 't19', 't11', 't27', 't29', 't50', 't60', 't47', 't88', 't66', 't94', 't49', 't77']
+# test_cases = ['t81', 't3', 't24', 't13', 't25', 't69', 't7', 't38', 't15', 't5', 't48', 't80', 't28', 't82', 't78', 't73', 't65', 't91', 't11', 't8', 't27', 't9', 't75', 't29', 't46', 't22', 't50', 't60', 't47', 't66', 't68', 't49', 't34', 't77'] ]
+test_cases = None
 iterations = 4
 
-strengths = [1, 0.95, 0.9, 0.9, 0.6]
-compensation_scale = [1.5, 1.3, 1.0, 1.0, 1.0]
+strengths = [1, 0.95, 0.95, 0.95, 0.95]
+compensation_scale = [0.0, 0.4, 0.4, 0.4, 0.5]
 
 if test_cases is None:
   test_cases = os.listdir(f"./{data_folder}/{method}")
@@ -75,34 +78,34 @@ for test_case in test_cases:
   # prepare prompt
   with open(prompt_path, "r") as f:
     prompt = f.read()
-  prompt = "a photo of clear sky with a few white clouds scattered around. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
+  # prompt = "a photo of clear sky. High resuloion image with a lot of details, high luminance and sharpness. 4K, Ultra Quality."
   negative_prompt = "ugly, dark, bad, terrible, awful, horrible, disgusting, gross, nasty, unattractive, unpleasant, repulsive, revolting, vile, foul, abhorrent, loathsome, hideous, unsightly, unlovely, unpleasing, unappealing, uninviting, unwelcome, unattractive, unprepossessing, uncomely, unbeautiful"
 
   # prepare CRF
-  if not os.path.exists(os.path.join(output_folder, method, test_case, 'inverse_crf.npy')):
-    images = []
-    for i in range(4):
-      images.append(cv2.imread(os.path.join(data_folder, method, test_case, '{}.png'.format(-i))))
+  # if not os.path.exists(os.path.join(output_folder, method, test_case, 'inverse_crf.npy')):
+  #   images = []
+  #   for i in range(4):
+  #     images.append(cv2.imread(os.path.join(data_folder, method, test_case, '{}.png'.format(-i))))
   
-    calibrate = cv2.createCalibrateDebevec()
-    response = calibrate.process(images, times)
-    np.save(os.path.join(output_folder, method, test_case, 'inverse_crf.npy'), response)
+  #   calibrate = cv2.createCalibrateDebevec()
+  #   response = calibrate.process(images, times)
+  #   np.save(os.path.join(output_folder, method, test_case, 'inverse_crf.npy'), response)
 
-    plt.figure
-    plt.plot(response.reshape(256, 3)[:, 0], 'r')
-    plt.plot(response.reshape(256, 3)[:, 1], 'g')
-    plt.plot(response.reshape(256, 3)[:, 2], 'b')
-    plt.grid(False)
-    plt.savefig(os.path.join(output_folder, method, test_case, 'inverse_crf.png'))
-    plt.close()
+  #   plt.figure
+  #   plt.plot(response.reshape(256, 3)[:, 0], 'r')
+  #   plt.plot(response.reshape(256, 3)[:, 1], 'g')
+  #   plt.plot(response.reshape(256, 3)[:, 2], 'b')
+  #   plt.grid(False)
+  #   plt.savefig(os.path.join(output_folder, method, test_case, 'inverse_crf.png'))
+  #   plt.close()
 
-  response = np.load(os.path.join(output_folder, method, test_case, 'inverse_crf.npy'))
+  # response = np.load(os.path.join(output_folder, method, test_case, 'inverse_crf.npy'))
 
   for iteration in range(1, iterations+1):
     os.makedirs(f'./{output_folder}/{method}/{test_case}/{str(iteration)}_results/', exist_ok=True)
     generator = torch.Generator(device="cuda")
     seed = random.randint(0, 1000000)
-    print(seed)
+    print('using random seed:', seed)
 
     for i in range(1, 4):
       generator = torch.Generator(device="cuda")
@@ -222,6 +225,14 @@ for test_case in test_cases:
     # path = f'./data/Deep_Recursive_HDRI/t28'
     inverse_crf = scipy.io.loadmat(f'./{data_folder}/{method}/{test_case}/response.mat')['lin_fun'].reshape((256, 3)).astype(np.float32)
 
+    plt.figure
+    plt.plot(inverse_crf.reshape(256, 3)[:, 0], 'r')
+    plt.plot(inverse_crf.reshape(256, 3)[:, 1], 'g')
+    plt.plot(inverse_crf.reshape(256, 3)[:, 2], 'b')
+    plt.grid(False)
+    plt.savefig(os.path.join(output_folder, method, test_case, 'inverse_crf.png'))
+    plt.close()
+    
     images_path = []
     times = np.array([8, 4, 2, 1], dtype=np.float32)  
 
@@ -293,7 +304,8 @@ for test_case in test_cases:
               imgOut[:, :, i] = io_i
       
     hdr = imgOut
-  
+
+    os.makedirs(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/', exist_ok=True)
     cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/hdr.hdr', hdr)
     inverse_crf = inverse_crf.reshape((256, 3)) 
 
@@ -349,7 +361,7 @@ for test_case in test_cases:
 
       cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/{str(i)}.png', output_image)
 
-      new_mask = np.clip((Y1 < Y2) * (mask.reshape(1024, 1024)/255) * 255, 0, 255).astype(np.uint8)    
+      new_mask = np.clip((Y1 < Y2) * ((mask > 0).reshape(1024, 1024)) * 255, 0, 255).astype(np.uint8)    
 
       cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/mask_{str(i)}.png', new_mask)
   
@@ -359,9 +371,15 @@ for test_case in test_cases:
 
   for i in range(1, 4):
     shutil.copy(f'./{output_folder}/{method}/{test_case}/{str(iterations)}_tone_mapped/{str(-i)}.png', f'./{results_folder}/{method}/{test_case}/inpaint/{str(-i)}.png')
-    shutil.copy(f'./{data_folder}/{method}/{test_case}/{str(-i)}.png', f'./{results_folder}/{method}/{test_case}/baseline/{str(-i)}.png')
+    img = cv2.imread(f'./{data_folder}/{method}/{test_case}/{str(-i)}.png')
+    img = cv2.resize(img, (1024, 1024))
+    cv2.imwrite(f'./{results_folder}/{method}/{test_case}/baseline/{str(-i)}.png', img)
   
-  shutil.copy(f'./{data_folder}/{method}/{test_case}/0.png', f'./{results_folder}/{method}/{test_case}/inpaint/-0.png')
-  shutil.copy(f'./{data_folder}/{method}/{test_case}/0.png', f'./{results_folder}/{method}/{test_case}/baseline/-0.png')
+  img = cv2.imread(f'./{data_folder}/{method}/{test_case}/0.png')
+  img = cv2.resize(img, (1024, 1024))
+  cv2.imwrite(f'./{results_folder}/{method}/{test_case}/inpaint/-0.png', img)
+  cv2.imwrite(f'./{results_folder}/{method}/{test_case}/baseline/-0.png', img)
+  # shutil.copy(f'./{data_folder}/{method}/{test_case}/0.png', f'./{results_folder}/{method}/{test_case}/inpaint/-0.png')
+  # shutil.copy(f'./{data_folder}/{method}/{test_case}/0.png', f'./{results_folder}/{method}/{test_case}/baseline/-0.png')
   
     
