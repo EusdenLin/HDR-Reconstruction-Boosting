@@ -1,4 +1,0 @@
-t60_ev-0.png 32
-t60_ev-1.png 64
-t60_ev-2.png 128
-t60_ev-3.png 256

@@ -22,22 +22,20 @@ def get_score(img_paths, inpaint_paths):
     avg_score_baseline /= len(img_paths)
     avg_score_inpaint /= len(img_paths)
     return avg_score_baseline, avg_score_inpaint
-
 # target_folder = './evaluation_RH'
-# target_folder = './evaluation_glowgan'
-target_folder = './results/CEVR'
-case_folders = './results/CEVR'
+# target_folder = './evaluation_single'
+RH_folder = './results/VDS/KK_TMO/single_boost'
+case_folder = './results/VDS/KK_TMO/single_boost'
 
 inpaint_paths = []
 baseline_paths = []
 
-for path in os.listdir(case_folders):
-    for i in range(1, 4):
-        inpaint_paths.append(f'{target_folder}/{path}/inpaint/{-i}.png')
-        baseline_paths.append(f'{target_folder}/{path}/baseline/{-i}.png')
+for path in os.listdir(case_folder):
+    # for i in range(1, 4):
+    inpaint_paths.append(f'{RH_folder}/{path}/inpaint.png')
+    baseline_paths.append(f'{case_folder}/{path}/baseline.png')
 
 baseline_score, inpaint_score = get_score(baseline_paths, inpaint_paths)
-# baseline_score = get_score(baseline_paths)
 
-print(f'Generated score: {inpaint_score}')
-print(f'Baseline score: {baseline_score}')
+print(f'inpaint score: {inpaint_score}')
+print(f'baseline score: {baseline_score}')

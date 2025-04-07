@@ -24,7 +24,6 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
         prompt: Union[str, List[str]] = None,
         prompt_2: Optional[Union[str, List[str]]] = None,
         image: PipelineImageInput = None,
-        image_2: PipelineImageInput = None,
         mask_image: PipelineImageInput = None,
         control_image: Union[
             PipelineImageInput,
@@ -103,7 +102,7 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             ]
 
         # 1. Check inputs
-        
+        # breakpoint()
         self.check_inputs(
             prompt,
             prompt_2,
@@ -209,9 +208,6 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
         init_image = self.image_processor.preprocess(image, height=height, width=width)
         init_image = init_image.to(dtype=torch.float32)
 
-        init_image_2 = self.image_processor.preprocess(image_2, height=height, width=width)
-        init_image_2 = init_image_2.to(dtype=torch.float32)
-
         # 5.2 Prepare control images
         if isinstance(controlnet, ControlNetModel):
             control_image = self.prepare_control_image(
@@ -298,46 +294,6 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
             latents, noise, image_latents = latents_outputs
         else:
             latents, noise = latents_outputs
-
-        # 6.1 Prepare consistency latents
-        if inpaint_kwargs['another_seed']:
-            latents_outputs_2 = self.prepare_latents(
-                batch_size * num_images_per_prompt,
-                num_channels_latents,
-                height,
-                width,
-                prompt_embeds.dtype,
-                device,
-                generator,
-                None,
-                image=init_image_2,
-                timestep=latent2_timestep,
-                is_strength_max=is_strength_max_2,
-                return_noise=True,
-                return_image_latents=return_image_latents,
-                current_seed=current_seed,
-            )
-        else:
-            latents_outputs_2 = self.prepare_latents(
-                batch_size * num_images_per_prompt,
-                num_channels_latents,
-                height,
-                width,
-                prompt_embeds.dtype,
-                device,
-                generator,
-                None,
-                image=init_image_2,
-                timestep=latent2_timestep,
-                is_strength_max=is_strength_max_2,
-                return_noise=True,
-                return_image_latents=return_image_latents,
-            )
-
-        if return_image_latents:
-            latents_2, noise_2, image_latents_2 = latents_outputs_2
-        else:
-            latents_2, noise_2 = latents_outputs_2
             
         # 7. Prepare mask latent variables
         mask, masked_image_latents = self.prepare_mask_latents(
@@ -441,12 +397,12 @@ class CustomStableDiffusionXLControlNetInpaintPipeline(StableDiffusionXLControlN
         # breakpoint() # check num_inference_steps, timesteps
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
-                if t == latent2_timestep and inpaint_kwargs['method'] == 'iterative':
-                    print(f'[info] latent blending: strength={inpaint_kwargs["strength"]}, weight={inpaint_kwargs["weight"]}')
-                    print(latent2_timestep)
-                    weight2 = inpaint_kwargs['weight']
-                    weight1 = 1 - weight2
-                    latents = (latents_2 * init_mask * weight1) + (latents * init_mask * weight2) + (1 - init_mask) * latents
+                # if t == latent2_timestep and inpaint_kwargs['method'] == 'iterative':
+                #     print(f'[info] latent blending: strength={inpaint_kwargs["strength"]}, weight={inpaint_kwargs["weight"]}')
+                #     print(latent2_timestep)
+                #     weight2 = inpaint_kwargs['weight']
+                #     weight1 = 1 - weight2
+                #     latents = (latents_2 * init_mask * weight1) + (latents * init_mask * weight2) + (1 - init_mask) * latents
 
                 # expand the latents if we are doing classifier free guidance
                 latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents

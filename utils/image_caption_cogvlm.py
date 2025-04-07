@@ -9,12 +9,12 @@ tokenizer = LlamaTokenizer.from_pretrained('lmsys/vicuna-7b-v1.5')
 with init_empty_weights():
     model = AutoModelForCausalLM.from_pretrained(
         'THUDM/cogvlm-chat-hf',
-        torch_dtype=torch.bfloat16,
+        torch_dtype=torch.float16,
         low_cpu_mem_usage=True,
         trust_remote_code=True,
     )
-device_map = infer_auto_device_map(model, max_memory={0:'20GiB',1:'20GiB','cpu':'16GiB'}, no_split_module_classes=['CogVLMDecoderLayer', 'TransformerLayer'])
-checkpoint_path = '/home/ytlin/.cache/huggingface/hub/models--THUDM--cogvlm-chat-hf/snapshots/e29dc3ba206d524bf8efbfc60d80fc4556ab0e3c'
+device_map = infer_auto_device_map(model, max_memory={0:'30GiB',1:'30GiB','cpu':'16GiB'}, no_split_module_classes=['CogVLMDecoderLayer', 'TransformerLayer'])
+checkpoint_path = '/home/u1702230/.cache/huggingface/hub/models--THUDM--cogvlm-chat-hf/snapshots/e29dc3ba206d524bf8efbfc60d80fc4556ab0e3c/'
 model = load_checkpoint_and_dispatch(
     model,
     checkpoint_path,   # typical, '~/.cache/huggingface/hub/models--THUDM--cogvlm-chat-hf/snapshots/balabala'
@@ -27,7 +27,7 @@ model = model.eval()
 #     print(f"{n}: {p.device}")
 
 # path = 'data/VDS/'
-path = './1111_evaluation/'
+path = './data_HDReye/Deep_Recursive_HDRI/'
 
 def extract_or_keep(text):
     # Try to find text within single quotes
@@ -48,7 +48,7 @@ for folder in os.listdir(path):
         'input_ids': inputs['input_ids'].unsqueeze(0).to('cuda'),
         'token_type_ids': inputs['token_type_ids'].unsqueeze(0).to('cuda'),
         'attention_mask': inputs['attention_mask'].unsqueeze(0).to('cuda'),
-        'images': [[inputs['images'][0].to('cuda').to(torch.bfloat16)]],
+        'images': [[inputs['images'][0].to('cuda').to(torch.float16)]],
     }
     gen_kwargs = {"max_length": 2048, "do_sample": False}
 

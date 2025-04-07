@@ -18,21 +18,25 @@ import matplotlib.pyplot as plt
 
 device = "cuda"
 img_size = (1024, 1024)
+method = "CEVR"
+dataset = "special"
+data_folder = "data/" + dataset
+results_folder = "results/" + dataset
+output_folder = "results/intermediate_" + dataset
 # results_folder = "results_HDReye"
-results_folder = "results_HDReye"
-method = "Deep_Recursive_HDRI"
-data_folder = "data_HDReye"
-output_folder = "results_intermediate_HDReye"
 # data_folder = "data_HDReye"
 # output_folder = "results_intermediate_HDReye"
+# results_folder = "results_self"
+# data_folder = "data_self"
+# output_folder = "results_intermediate_self"
 
 # test_cases = ['t81', 't12', 't44', 't71', 't24', 't31', 't13', 't25', 't35', 't69', 't59', 't57', 't4', 't21', 't7', 't38', 't76', 't15', 't30', 't48', 't52', 't1', 't33', 't23', 't37', 't85', 't17', 't82', 't92', 't78', 't6', 't26', 't51', 't41', 't45', 't62', 't65', 't91', 't53', 't87', 't63', 't84', 't39', 't16', 't9', 't90', 't70', 't14', 't83', 't10', 't40', 't32', 't29', 't61', 't46', 't89', 't22', 't2', 't56', 't50', 't74', 't60', 't64', 't47', 't66', 't68', 't55', 't94', 't79', 't72', 't42', 't18', 't54', 't49', 't77', 't43']
 # test_cases = ['t81', 't3', 't24', 't13', 't25', 't69', 't7', 't38', 't15', 't5', 't48', 't80', 't28', 't82', 't78', 't73', 't65', 't91', 't11', 't8', 't27', 't9', 't75', 't29', 't46', 't22', 't50', 't60', 't47', 't66', 't68', 't49', 't34', 't77'] ]
-test_cases = None
+test_cases = ['C1']
 iterations = 4
 
-strengths = [1, 0.95, 0.95, 0.95, 0.95]
-compensation_scale = [0.0, 0.4, 0.4, 0.4, 0.5]
+strengths = [0.95, 0.94, 0.93, 0.92, 0.91]
+compensation_scale = [0.2, 0.3, 0.4, 0.5, 0.6]
 
 if test_cases is None:
   test_cases = os.listdir(f"./{data_folder}/{method}")
@@ -75,10 +79,10 @@ for test_case in test_cases:
 
   control_image = load_image(depth_path).resize(img_size)
 
-  # prepare prompt
+  # prepare prompt  
   with open(prompt_path, "r") as f:
     prompt = f.read()
-  # prompt = "a photo of clear sky. High resuloion image with a lot of details, high luminance and sharpness. 4K, Ultra Quality."
+  # prompt = "a photo of bright sky with a few clouds. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
   negative_prompt = "ugly, dark, bad, terrible, awful, horrible, disgusting, gross, nasty, unattractive, unpleasant, repulsive, revolting, vile, foul, abhorrent, loathsome, hideous, unsightly, unlovely, unpleasing, unappealing, uninviting, unwelcome, unattractive, unprepossessing, uncomely, unbeautiful"
 
   # prepare CRF
@@ -106,7 +110,6 @@ for test_case in test_cases:
     generator = torch.Generator(device="cuda")
     seed = random.randint(0, 1000000)
     print('using random seed:', seed)
-
     for i in range(1, 4):
       generator = torch.Generator(device="cuda")
       generator.manual_seed(seed)
@@ -117,6 +120,8 @@ for test_case in test_cases:
         img_path = f"./{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/{exposure}.png"
         mask_path = f"./{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/mask_{str(-i)}.png"
         
+      # if iteration == 1:
+      #   seed = 824302
 
       mask_image = load_image(mask_path).resize(img_size)
       image = load_image(img_path).resize(img_size)
@@ -135,7 +140,7 @@ for test_case in test_cases:
                 'weight': 0.3,
                 'method': 'normal',
                 'filter': False,
-                'another_seed' : iteration > 1,
+                'another_seed' : iteration > 0,
             },
             'current_seed': seed,
             'controlnet_conditioning_scale': 0.5,
@@ -332,7 +337,10 @@ for test_case in test_cases:
       # Load the image
       image = cv2.imread(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/{str(i)}.png').astype(np.float32)
       baseline = cv2.imread(f'./{data_folder}/{method}/{test_case}/{str(i)}.png').astype(np.float32)
-      mask = cv2.imread(f'./{data_folder}/{method}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
+      if iteration == 1:
+        mask = cv2.imread(f'./{data_folder}/{method}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
+      else:
+        mask = cv2.imread(f'./{output_folder}/{method}/{test_case}/{iteration-1}_tone_mapped_residual/mask_{str(i)}.png', cv2.IMREAD_GRAYSCALE)
 
       baseline = cv2.resize(baseline, (1024, 1024))
 
@@ -361,7 +369,7 @@ for test_case in test_cases:
 
       cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/{str(i)}.png', output_image)
 
-      new_mask = np.clip((Y1 < Y2) * ((mask > 0).reshape(1024, 1024)) * 255, 0, 255).astype(np.uint8)    
+      new_mask = np.clip((Y1 + 10 < Y2) * ((mask > 0).reshape(1024, 1024)) * 255, 0, 255).astype(np.uint8)    
 
       cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/mask_{str(i)}.png', new_mask)
   

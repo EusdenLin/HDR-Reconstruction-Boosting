@@ -1,7 +1,8 @@
 output/
+results*/
 temp_inpaint_iterative/
 *.pyc
-data/
+data*/
 test_control/
 test_control_new/
 test_no_control/
@@ -10,9 +11,17 @@ test*
 1111_evaluation/
 utils/depth_pro/
 checkpoints/
+09*/
+10*/
+GAMMA/
 11*/
 12*/
+01*/
+response*/
+20*/
+hdr_images/
 evaluation_*/
 HDREye/
 CEVR/
 *.png/
+single_image_hdr/

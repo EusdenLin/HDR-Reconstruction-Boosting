@@ -9,7 +9,7 @@ model.eval()
 
 # Run inference.
 
-path = './1111_evaluation/'
+path = './data/special/gamma/'
 cases = os.listdir(path)
 
 for case in cases:

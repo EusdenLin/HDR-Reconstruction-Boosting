@@ -1,11 +1,10 @@
 import cv2
 import os
 import numpy as np
+from diffusers.utils import load_image
 
-def load_image(path):
-    return cv2.imread(path)
-
-def create_mask(image, threshold=250):
+def create_mask(image, threshold=240):
+    image = cv2.cvtColor(np.asarray(image),cv2.COLOR_RGB2BGR)
     image = image.astype(np.float16)
     mask = np.zeros_like(image, dtype=np.float16)
 
@@ -18,13 +17,12 @@ def save_image(image, path):
     cv2.imwrite(path, image)
 
 def main():
-    # test_case = ["t60", "t68", "t82"]
-    test_case = os.listdir("./1111_evaluation/")
+    img_size = (1024, 1024)
+    test_case = os.listdir("./data/special/gamma")
     for case in test_case:
-        image = load_image(f"./1111_evaluation/{case}/0.png")
+        image = load_image(f"./data/special/gamma/{case}/0.png").resize(img_size)
         mask = create_mask(image)
-        mask = cv2.resize(mask, (1024, 1024))
-        save_image(mask, f"./1111_evaluation/{case}/mask.png")
+        save_image(mask, f"./data/special/gamma/{case}/mask.png")
 
 if __name__ == "__main__":
     main()

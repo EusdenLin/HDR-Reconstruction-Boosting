@@ -19,17 +19,20 @@ img_size = (1024, 1024)
 # data_folder = "data"
 # output_folder = "results_intermediate"
 method = "gamma"
-results_folder = "results_HDReye"
-data_folder = "data_HDReye"
-output_folder = "results_intermediate_HDReye"
+dataset = "special"
+data_folder = "data/" + dataset
+results_folder = "results/" + dataset
+output_folder = "results/intermediate_" + dataset
+# results_folder = "results_self"
+# data_folder = "data_self"
+# output_folder = "results_intermediate_self"
 
-# test_cases = ['t81', 't24', 't69', 't4', 't7', 't30', 't48', 't52', 't23', 't17', 't82', 't78', 't51', 't91', 't63', 't84', 't16', 't90', 't70', 't14', 't32', 't46', 't89', 't22', 't2', 't56', 't50', 't74', 't60', 't64', 't47', 't66', 't68', 't94', 't79', 't43']
-test_cases = None
+test_cases = ['C2']
 iterations = 4
 
-strengths = [1, 0.95, 0.95, 0.95, 0.95]
-compensation_scale = [0.0, 0.4, 0.4, 0.4, 0.5]
-
+strengths = [1, 0.96, 0.96, 0.95, 0.9]
+compensation_scale = [0.0, 0.2, 0.3, 0.4, 0.5]
+# 238231
 if test_cases is None:
   test_cases = os.listdir(f"./{data_folder}/{method}")
 
@@ -39,7 +42,6 @@ controlnet = ControlNetModel.from_pretrained(
     use_safetensors=True,
     variant="fp16"
 ).to(device)
-
 
 vae = AutoencoderKL.from_pretrained("madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16)
 extra_kwargs = {"vae": vae} if vae is not None else {}
@@ -78,18 +80,25 @@ for test_case in test_cases:
   control_image = load_image(depth_path).resize(img_size)
 
   # prepare prompt
-  with open(prompt_path, "r") as f:
-    prompt = f.read()
-  # prompt = "a photo of clear sky. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
-  negative_prompt = "ugly, dark, bad, terrible, awful, horrible, disgusting, gross, nasty, unattractive, unpleasant, repulsive, revolting, vile, foul, abhorrent, loathsome, hideous, unsightly, unlovely, unpleasing, unappealing, uninviting, unwelcome, unattractive, unprepossessing, uncomely, unbeautiful"
+  # with open(prompt_path, "r") as f:
+  #   prompt = f.read()
+  prompt = "a photo of clear bright blue sky with a few clouds scatterred around. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
+  # prompt = "a photo of bright white cloudy sky. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
 
+  negative_prompt = "ugly, dark, bad, terrible, awful, horrible, disgusting, gross, nasty, unattractive, unpleasant, repulsive, revolting, vile, foul, abhorrent, loathsome, hideous, unsightly, unlovely, unpleasing, unappealing, uninviting, unwelcome, unattractive, unprepossessing, uncomely, unbeautiful, building, tree"
+  # negative_prompt = ""
   for iteration in range(1, iterations+1):
     os.makedirs(f'./{output_folder}/{method}/{test_case}/{str(iteration)}_results/', exist_ok=True)
     generator = torch.Generator(device="cuda")
     seed = random.randint(0, 1000000)
     print(seed)
+    # if iteration == 1:
+    #   continue
+    # if iteration == 2:
+    #   seed = 383128
 
     for i in range(0, 4):
+
       generator = torch.Generator(device="cuda")
       generator.manual_seed(seed)
       exposure = str(-i)
@@ -123,7 +132,7 @@ for test_case in test_cases:
                 'weight': 0.3,
                 'method': 'normal',
                 'filter': False,
-                'another_seed' : iteration > 1,
+                'another_seed' : iteration > 0,
             },
             'current_seed': seed,
             'controlnet_conditioning_scale': 0.5,
@@ -163,6 +172,7 @@ for test_case in test_cases:
       image = cv2.imread(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/{str(i)}.png').astype(np.float32)
       baseline = cv2.imread(f'./{data_folder}/{method}/{test_case}/{str(i)}.png').astype(np.float32)
       mask = cv2.imread(f'./{data_folder}/{method}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
+      # mask = cv2.imread(f'./{output_folder}/{method}/{test_case}/{iteration-1}_tone_mapped_residual/mask_{str(i)}.png', cv2.IMREAD_GRAYSCALE)
 
       baseline = cv2.resize(baseline, (1024, 1024))
 
@@ -181,7 +191,7 @@ for test_case in test_cases:
       Y1_com = cv2.add(Y1, residual*compensation_scale[iteration])
       Y1_com = np.clip(Y1_com, 0, 255)
 
-      cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/residual_{str(i)}.png', residual*10)
+      cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/residual_{str(i)}.png', residual*3)
 
       # Merge the channels back together
       yuv_image = cv2.merge([Y1_com, U1, V1])
