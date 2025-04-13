@@ -4,21 +4,20 @@ import ezexr
 import os
 import numpy as np
 
-dir = 'data/self/single'
-target_dir = 'data/self/single_boost'
+dir = '/ssddisk/ytlin/data/HDR-Real/'
+target_dir = '/ssddisk/ytlin/data/HDR-Real/single_boost'
 
 gamma = 2.2
 
 files = os.listdir(dir)
-files = ['C34.hdr']
+
+os.makedirs(target_dir, exist_ok=True)
 
 for file in files:
     print(file)
-    if not file.endswith('.hdr'):
-        continue
-    os.makedirs(os.path.join(target_dir, file.replace('.hdr', '')), exist_ok=True)
-    hdr = cv2.imread(os.path.join(dir, file), cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
+    os.makedirs(os.path.join(target_dir, file), exist_ok=True)
+    hdr = cv2.imread(os.path.join(dir, file, 'ours.hdr'), cv2.IMREAD_ANYCOLOR | cv2.IMREAD_ANYDEPTH)
     hdr = cv2.cvtColor(hdr, cv2.COLOR_BGR2RGB)
     for num in [0, -1, -2, -3]: #evs[-1] is -5
         lumi = np.clip(((2 ** num) * hdr) ** (1/gamma), 0, 1)
-        skimage.io.imsave(os.path.join(target_dir, file.replace('.hdr', ''), f"{int(num)}.png"), skimage.img_as_ubyte(lumi))
+        skimage.io.imsave(os.path.join(target_dir, file, f"{int(num)}.png"), skimage.img_as_ubyte(lumi))

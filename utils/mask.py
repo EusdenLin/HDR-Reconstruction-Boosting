@@ -18,11 +18,11 @@ def save_image(image, path):
 
 def main():
     img_size = (1024, 1024)
-    test_case = os.listdir("./data/special/gamma")
+    test_case = os.listdir("/ssddisk/ytlin/data/HDR-Real/single_boost")
     for case in test_case:
-        image = load_image(f"./data/special/gamma/{case}/0.png").resize(img_size)
+        image = load_image(f"/ssddisk/ytlin/data/HDR-Real/single_boost/{case}/0.png").resize(img_size)
         mask = create_mask(image)
-        save_image(mask, f"./data/special/gamma/{case}/mask.png")
+        save_image(mask, f"/ssddisk/ytlin/data/HDR-Real/single_boost/{case}/mask.png")
 
 if __name__ == "__main__":
     main()

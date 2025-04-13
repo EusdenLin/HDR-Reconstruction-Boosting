@@ -9,7 +9,7 @@ model.eval()
 
 # Run inference.
 
-path = './data/special/gamma/'
+path = '/ssddisk/ytlin/data/HDR-Real/single_boost/'
 cases = os.listdir(path)
 
 for case in cases:

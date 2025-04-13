@@ -18,23 +18,24 @@ img_size = (1024, 1024)
 # results_folder = "results"
 # data_folder = "data"
 # output_folder = "results_intermediate"
-method = "gamma"
-dataset = "special"
-data_folder = "data/" + dataset
-results_folder = "results/" + dataset
-output_folder = "results/intermediate_" + dataset
+method = "single_boost"
+dataset = "HDR-Real"
+prefix = "/ssddisk/ytlin/"
+data_folder = prefix + "data/" + dataset
+results_folder = prefix + "results/" + dataset
+output_folder = prefix + "results/intermediate_" + dataset
 # results_folder = "results_self"
 # data_folder = "data_self"
 # output_folder = "results_intermediate_self"
 
-test_cases = ['C2']
+test_cases = ['01188']
 iterations = 4
 
 strengths = [1, 0.96, 0.96, 0.95, 0.9]
 compensation_scale = [0.0, 0.2, 0.3, 0.4, 0.5]
 # 238231
 if test_cases is None:
-  test_cases = os.listdir(f"./{data_folder}/{method}")
+  test_cases = os.listdir(f"{data_folder}/{method}")
 
 controlnet = ControlNetModel.from_pretrained(
     "diffusers/controlnet-depth-sdxl-1.0", 
@@ -51,7 +52,7 @@ case_count = 0
 for test_case in test_cases:
   case_count += 1
   print(test_case, f', {case_count}/{len(test_cases)}')
-  os.makedirs(f'./{output_folder}/{method}/{test_case}/', exist_ok=True)
+  os.makedirs(f'{output_folder}/{method}/{test_case}/', exist_ok=True)
   pipe = CustomStableDiffusionXLControlNetInpaintPipeline.from_pretrained(
     "stabilityai/stable-diffusion-xl-base-1.0",
     controlnet=controlnet,
@@ -61,13 +62,13 @@ for test_case in test_cases:
     **extra_kwargs,
   ).to("cuda")
 
-  img_path = f"./{data_folder}/{method}/{test_case}/0.png"
+  img_path = f"{data_folder}/{method}/{test_case}/0.png"
   image = load_image(img_path).resize(img_size)
 
-  mask_path = f"./{data_folder}/{method}/{test_case}/mask.png"
+  mask_path = f"{data_folder}/{method}/{test_case}/mask.png"
   
-  prompt_path = f"./{data_folder}/{method}/{test_case}/caption_cog.txt"
-  depth_path = f"./{data_folder}/{method}/{test_case}/depth.png"
+  prompt_path = f"{data_folder}/{method}/{test_case}/caption_cog.txt"
+  depth_path = f"{data_folder}/{method}/{test_case}/depth.png"
 
   control_image = load_image(depth_path).resize(img_size)
 
@@ -80,15 +81,15 @@ for test_case in test_cases:
   control_image = load_image(depth_path).resize(img_size)
 
   # prepare prompt
-  # with open(prompt_path, "r") as f:
-  #   prompt = f.read()
-  prompt = "a photo of clear bright blue sky with a few clouds scatterred around. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
+  with open(prompt_path, "r") as f:
+    prompt = f.read()
+  # prompt = "a photo of clear bright blue sky with a few clouds scatterred around. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
   # prompt = "a photo of bright white cloudy sky. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
 
   negative_prompt = "ugly, dark, bad, terrible, awful, horrible, disgusting, gross, nasty, unattractive, unpleasant, repulsive, revolting, vile, foul, abhorrent, loathsome, hideous, unsightly, unlovely, unpleasing, unappealing, uninviting, unwelcome, unattractive, unprepossessing, uncomely, unbeautiful, building, tree"
   # negative_prompt = ""
   for iteration in range(1, iterations+1):
-    os.makedirs(f'./{output_folder}/{method}/{test_case}/{str(iteration)}_results/', exist_ok=True)
+    os.makedirs(f'{output_folder}/{method}/{test_case}/{str(iteration)}_results/', exist_ok=True)
     generator = torch.Generator(device="cuda")
     seed = random.randint(0, 1000000)
     print(seed)
@@ -103,16 +104,16 @@ for test_case in test_cases:
       generator.manual_seed(seed)
       exposure = str(-i)
       if iteration == 1:
-        img_path = f"./{data_folder}/{method}/{test_case}/{exposure}.png"
+        img_path = f"{data_folder}/{method}/{test_case}/{exposure}.png"
       else:
-        img_path = f"./{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/{exposure}.png"
-        mask_path = f"./{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/mask_{str(-i)}.png"
+        img_path = f"{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/{exposure}.png"
+        mask_path = f"{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/mask_{str(-i)}.png"
         
 
       if i == 0:
-        img_path = f"./{data_folder}/{method}/{test_case}/0.png"
+        img_path = f"{data_folder}/{method}/{test_case}/0.png"
         image = load_image(img_path).resize(img_size)
-        image.save(f'./{output_folder}/{method}/{test_case}/{str(iteration)}_results/{exposure}.png')
+        image.save(f'{output_folder}/{method}/{test_case}/{str(iteration)}_results/{exposure}.png')
         continue
       image = load_image(img_path).resize(img_size)
       mask_image = load_image(mask_path).resize(img_size)
@@ -152,7 +153,7 @@ for test_case in test_cases:
         image = cv2.cvtColor(np.asarray(image),cv2.COLOR_RGB2BGR)
         mask = np.asarray(mask_image)
         mask = mask.astype(np.float64) / 255
-        cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{str(iteration)}_results/{exposure}.png', img*mask + image*(1-mask))
+        cv2.imwrite(f'{output_folder}/{method}/{test_case}/{str(iteration)}_results/{exposure}.png', img*mask + image*(1-mask))
         # img.save(f'./{output_folder}/{test_case}/{str(iteration)}_results/{exposure}.png')
 
     # Merge to HDR
@@ -166,12 +167,12 @@ for test_case in test_cases:
     subprocess.run(command)
 
      # Residual
-    os.makedirs(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/', exist_ok=True)
+    os.makedirs(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/', exist_ok=True)
     for i in range(-3, 0):
       # Load the image
-      image = cv2.imread(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/{str(i)}.png').astype(np.float32)
-      baseline = cv2.imread(f'./{data_folder}/{method}/{test_case}/{str(i)}.png').astype(np.float32)
-      mask = cv2.imread(f'./{data_folder}/{method}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
+      image = cv2.imread(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/{str(i)}.png').astype(np.float32)
+      baseline = cv2.imread(f'{data_folder}/{method}/{test_case}/{str(i)}.png').astype(np.float32)
+      mask = cv2.imread(f'{data_folder}/{method}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
       # mask = cv2.imread(f'./{output_folder}/{method}/{test_case}/{iteration-1}_tone_mapped_residual/mask_{str(i)}.png', cv2.IMREAD_GRAYSCALE)
 
       baseline = cv2.resize(baseline, (1024, 1024))
@@ -191,7 +192,7 @@ for test_case in test_cases:
       Y1_com = cv2.add(Y1, residual*compensation_scale[iteration])
       Y1_com = np.clip(Y1_com, 0, 255)
 
-      cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/residual_{str(i)}.png', residual*3)
+      cv2.imwrite(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/residual_{str(i)}.png', residual*3)
 
       # Merge the channels back together
       yuv_image = cv2.merge([Y1_com, U1, V1])
@@ -199,23 +200,23 @@ for test_case in test_cases:
       # Convert the image back to BGR color space
       output_image = cv2.cvtColor(yuv_image, cv2.COLOR_YUV2BGR)
 
-      cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/{str(i)}.png', output_image)
+      cv2.imwrite(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/{str(i)}.png', output_image)
 
       new_mask = np.clip((Y1 < Y2) * ((mask > 0).reshape(1024, 1024)) * 255, 0, 255).astype(np.uint8)    
 
-      cv2.imwrite(f'./{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/mask_{str(i)}.png', new_mask)
+      cv2.imwrite(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/mask_{str(i)}.png', new_mask)
     
   # Save to results
-  os.makedirs(f'./{results_folder}/{method}/{test_case}/baseline', exist_ok=True)
-  os.makedirs(f'./{results_folder}/{method}/{test_case}/inpaint', exist_ok=True)
+  os.makedirs(f'{results_folder}/{method}/{test_case}/baseline', exist_ok=True)
+  os.makedirs(f'{results_folder}/{method}/{test_case}/inpaint', exist_ok=True)
 
   for i in range(1, 4):
-    shutil.copy(f'./{output_folder}/{method}/{test_case}/{str(iterations)}_tone_mapped/{str(-i)}.png', f'./{results_folder}/{method}/{test_case}/inpaint/{str(-i)}.png')
-    img = cv2.imread(f'./{data_folder}/{method}/{test_case}/{str(-i)}.png')
+    shutil.copy(f'{output_folder}/{method}/{test_case}/{str(iterations)}_tone_mapped/{str(-i)}.png', f'{results_folder}/{method}/{test_case}/inpaint/{str(-i)}.png')
+    img = cv2.imread(f'{data_folder}/{method}/{test_case}/{str(-i)}.png')
     img = cv2.resize(img, (1024, 1024))
-    cv2.imwrite(f'./{results_folder}/{method}/{test_case}/baseline/{str(-i)}.png', img)
+    cv2.imwrite(f'{results_folder}/{method}/{test_case}/baseline/{str(-i)}.png', img)
   
-  img = cv2.imread(f'./{data_folder}/{method}/{test_case}/0.png')
+  img = cv2.imread(f'{data_folder}/{method}/{test_case}/0.png')
   img = cv2.resize(img, (1024, 1024))
-  cv2.imwrite(f'./{results_folder}/{method}/{test_case}/inpaint/-0.png', img)
-  cv2.imwrite(f'./{results_folder}/{method}/{test_case}/baseline/-0.png', img)
+  cv2.imwrite(f'{results_folder}/{method}/{test_case}/inpaint/-0.png', img)
+  cv2.imwrite(f'{results_folder}/{method}/{test_case}/baseline/-0.png', img)

@@ -13,8 +13,8 @@ with init_empty_weights():
         low_cpu_mem_usage=True,
         trust_remote_code=True,
     )
-device_map = infer_auto_device_map(model, max_memory={0:'30GiB',1:'30GiB','cpu':'16GiB'}, no_split_module_classes=['CogVLMDecoderLayer', 'TransformerLayer'])
-checkpoint_path = '/home/u1702230/.cache/huggingface/hub/models--THUDM--cogvlm-chat-hf/snapshots/e29dc3ba206d524bf8efbfc60d80fc4556ab0e3c/'
+device_map = infer_auto_device_map(model, max_memory={0:'20GiB',1:'20GiB','cpu':'16GiB'}, no_split_module_classes=['CogVLMDecoderLayer', 'TransformerLayer'])
+checkpoint_path = '/home/ytlin/.cache/huggingface/hub/models--THUDM--cogvlm-chat-hf/snapshots/e29dc3ba206d524bf8efbfc60d80fc4556ab0e3c/'
 model = load_checkpoint_and_dispatch(
     model,
     checkpoint_path,   # typical, '~/.cache/huggingface/hub/models--THUDM--cogvlm-chat-hf/snapshots/balabala'
@@ -27,7 +27,7 @@ model = model.eval()
 #     print(f"{n}: {p.device}")
 
 # path = 'data/VDS/'
-path = './data_HDReye/Deep_Recursive_HDRI/'
+path = '/ssddisk/ytlin/data/HDR-Real/single_boost/'
 
 def extract_or_keep(text):
     # Try to find text within single quotes
@@ -40,8 +40,6 @@ def extract_or_keep(text):
 # chat example
 query = 'Imagine the details in the over-exposed region. Please make it short and concise and makes sense. Start with "A photo of bright".'
 for folder in os.listdir(path):
-    if folder == 'grid_test':
-        continue
     image = Image.open(f'{path}{folder}/0.png').convert('RGB')
     inputs = model.build_conversation_input_ids(tokenizer, query=query, history=[], images=[image])  # chat mode
     inputs = {
