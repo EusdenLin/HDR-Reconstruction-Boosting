@@ -1,4 +1,4 @@
-name: diffusionlight
+name: boor
 channels:
   - conda-forge
   - defaults
