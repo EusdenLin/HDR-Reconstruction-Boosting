@@ -18,8 +18,8 @@ preprocess = transforms.Compose([
 ])
 
 # path = '1119_diversity'
-path = './results_HDReye/KK_TMO/gamma_WACV'
-targer_folder = './results_HDReye/KK_TMO/gamma_WACV'
+path = '/home/ytlin/boosting_HDR/results/VDS/RH_TMO/CEVR_1.0'
+targer_folder = '/home/ytlin/boosting_HDR/results/VDS/KK_TMO/CEVR_1.0'
 test_cases = os.listdir(f"./{path}")
 
 remake_cases = []
@@ -42,7 +42,7 @@ for test_case in test_cases:
 
     score_temp = score.item()
 
-    baseline_path = f"./{path}/{test_case}/baseline.png"
+    baseline_path = f"./{path}/{test_case}/inpaint.png"
     img = Image.open(baseline_path).convert("RGB")
     img = transforms.Resize((1024, 1024))(img)
     img_ds = transforms.Resize((img.size[1] // 2, img.size[0] // 2))(img)

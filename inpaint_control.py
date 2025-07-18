@@ -18,21 +18,19 @@ img_size = (1024, 1024)
 # results_folder = "results"
 # data_folder = "data"
 # output_folder = "results_intermediate"
-method = "single_boost"
-dataset = "HDR-Real"
-prefix = "/ssddisk/ytlin/"
+method = "gamma"
+dataset = "self"
+prefix = "/home/ytlin/boosting_HDR/"
 data_folder = prefix + "data/" + dataset
-results_folder = prefix + "results/" + dataset
-output_folder = prefix + "results/intermediate_" + dataset
-# results_folder = "results_self"
-# data_folder = "data_self"
-# output_folder = "results_intermediate_self"
+results_folder = "/home/ytlin/boosting_HDR/results/" + dataset
+output_folder = "/home/ytlin/boosting_HDR/results/intermediate_" + dataset
 
-test_cases = ['01188']
+test_cases = None # all test cases in the dataset folder
 iterations = 4
 
-strengths = [1, 0.96, 0.96, 0.95, 0.9]
-compensation_scale = [0.0, 0.2, 0.3, 0.4, 0.5]
+strengths = [1.0, 0.95, 0.90, 0.85, 0.80]
+compensation_scale = [0.3, 0.4, 0.5, 0.6, 0.6]
+
 # 238231
 if test_cases is None:
   test_cases = os.listdir(f"{data_folder}/{method}")
@@ -52,6 +50,8 @@ case_count = 0
 for test_case in test_cases:
   case_count += 1
   print(test_case, f', {case_count}/{len(test_cases)}')
+  # if os.path.exists(f'{prefix}/results/{dataset}/{method}/{test_case}/inpaint/'):
+  #   continue
   os.makedirs(f'{output_folder}/{method}/{test_case}/', exist_ok=True)
   pipe = CustomStableDiffusionXLControlNetInpaintPipeline.from_pretrained(
     "stabilityai/stable-diffusion-xl-base-1.0",
@@ -83,7 +83,7 @@ for test_case in test_cases:
   # prepare prompt
   with open(prompt_path, "r") as f:
     prompt = f.read()
-  # prompt = "a photo of clear bright blue sky with a few clouds scatterred around. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
+  # prompt = "a photo of clear bright blue sky with a few clouds scatterred around. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality. Good photo."
   # prompt = "a photo of bright white cloudy sky. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
 
   negative_prompt = "ugly, dark, bad, terrible, awful, horrible, disgusting, gross, nasty, unattractive, unpleasant, repulsive, revolting, vile, foul, abhorrent, loathsome, hideous, unsightly, unlovely, unpleasing, unappealing, uninviting, unwelcome, unattractive, unprepossessing, uncomely, unbeautiful, building, tree"
@@ -93,10 +93,6 @@ for test_case in test_cases:
     generator = torch.Generator(device="cuda")
     seed = random.randint(0, 1000000)
     print(seed)
-    # if iteration == 1:
-    #   continue
-    # if iteration == 2:
-    #   seed = 383128
 
     for i in range(0, 4):
 
@@ -109,7 +105,6 @@ for test_case in test_cases:
         img_path = f"{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/{exposure}.png"
         mask_path = f"{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/mask_{str(-i)}.png"
         
-
       if i == 0:
         img_path = f"{data_folder}/{method}/{test_case}/0.png"
         image = load_image(img_path).resize(img_size)
@@ -154,7 +149,6 @@ for test_case in test_cases:
         mask = np.asarray(mask_image)
         mask = mask.astype(np.float64) / 255
         cv2.imwrite(f'{output_folder}/{method}/{test_case}/{str(iteration)}_results/{exposure}.png', img*mask + image*(1-mask))
-        # img.save(f'./{output_folder}/{test_case}/{str(iteration)}_results/{exposure}.png')
 
     # Merge to HDR
 
@@ -173,7 +167,6 @@ for test_case in test_cases:
       image = cv2.imread(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/{str(i)}.png').astype(np.float32)
       baseline = cv2.imread(f'{data_folder}/{method}/{test_case}/{str(i)}.png').astype(np.float32)
       mask = cv2.imread(f'{data_folder}/{method}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
-      # mask = cv2.imread(f'./{output_folder}/{method}/{test_case}/{iteration-1}_tone_mapped_residual/mask_{str(i)}.png', cv2.IMREAD_GRAYSCALE)
 
       baseline = cv2.resize(baseline, (1024, 1024))
 

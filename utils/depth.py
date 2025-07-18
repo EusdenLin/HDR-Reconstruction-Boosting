@@ -9,10 +9,12 @@ model.eval()
 
 # Run inference.
 
-path = '/ssddisk/ytlin/data/HDR-Real/single_boost/'
+path = '/home/ytlin/boosting_HDR/data/self/CEVR_hres/'
 cases = os.listdir(path)
 
 for case in cases:
+    if case != 'C24':
+        continue
     print(f'Processing {case}...')
     image, _, f_px = depth_pro.load_rgb(f'{path}{case}/0.png')
     image = transform(image)

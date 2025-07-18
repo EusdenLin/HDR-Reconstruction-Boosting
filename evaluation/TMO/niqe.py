@@ -224,12 +224,15 @@ if __name__ == "__main__":
     score_inpaint = 0
     score_baseline = 0
 
-    target_path = './results/HDReye/KK_TMO/single_boost'
+    target_path = '/home/ytlin/boosting_HDR/results/VDS/RH_TMO/CEVR_wo_merge'
+    target_path_KK = '/home/ytlin/boosting_HDR/results/VDS/KK_TMO/CEVR_wo_merge'
     cases = os.listdir(target_path)
     for case in cases:
+        if case == 'compensation' or case == 'overview':
+            continue
         print(case)
         path_inpaint = os.path.join(target_path, case, f'inpaint.png')
-        path_baseline = os.path.join(target_path, case, f'baseline.png')
+        path_baseline = os.path.join(target_path_KK, case, f'inpaint.png')
 
         img_inpaint = np.array(Image.open(path_inpaint).convert('LA'))[:,:,0] # ref
         img_basline = np.array(Image.open(path_baseline).convert('LA'))[:,:,0] # ref
@@ -238,8 +241,8 @@ if __name__ == "__main__":
         score_inpaint += niqe(img_inpaint)
         score_baseline += niqe(img_basline) 
 
-    print('Average NIQE of inpaint is: %0.3f'% (score_inpaint / len(cases)))
-    print('Average NIQE of baseline is: %0.3f'% (score_baseline / len(cases)))
+    print('Average NIQE of RH is: %0.3f'% (score_inpaint / len(cases)))
+    print('Average NIQE of KK is: %0.3f'% (score_baseline / len(cases)))
     # print('Average NIQE of gamma is: %0.3f'% (score_gamma / len(cases)))
     # print('Average NIQE of cevr is: %0.3f'% (score_glowgan / len(cases)))
 

@@ -26,15 +26,17 @@ def adjust_exposure(image, exposure_factor):
 # Load the image
 
 # cases = ["t68", "t78", "t91", "t95"]
-cases = os.listdir("./data/special/GT_resize")
-os.makedirs("./data/special/gamma", exist_ok=True)
+cases = os.listdir("./data/HDR-Real/glowgan")
+os.makedirs("./data/HDR-Real/glowgan_boost", exist_ok=True)
 for case in cases:
     print(case)
-    os.makedirs(f"./data/special/gamma/{case.replace('.png', '')}", exist_ok=True)
-    image = cv2.imread(f'./data/special/GT_resize/{case}')    
+    if case.endswith(".png"):
+        continue
+    os.makedirs(f"./data/HDR-Real/glowgan_boost/{case.replace('.hdr', '')}", exist_ok=True)
+    image = cv2.imread(f'./data/HDR-Real/GT_resize/{case}')    
     for i in range(0, 4):
         exposure = str(-i)
-        img_path = f"./data/special/gamma/{case.replace('.png', '')}/{exposure}.png"
+        img_path = f"./data/HDR-Real/glowgan/{case.replace('.hdr', '')}/{exposure}.png"
 
         # Set the desired exposure factor (e.g., 1.5 for +1.5 stops)
         exposure_factor = pow(2, -i)
@@ -45,7 +47,7 @@ for case in cases:
         cv2.imwrite(img_path, cv2.resize(adjusted_image, (1024, 1024)))
 
         exposure = str(i)
-        img_path = f"./data/special/gamma/{case.replace('.png', '')}/{exposure}.png"
+        img_path = f"./data/HDR-Real/glowgan/{case.replace('.png', '')}/{exposure}.png"
 
         # Set the desired exposure factor (e.g., 1.5 for +1.5 stops)
         exposure_factor = pow(2, i)

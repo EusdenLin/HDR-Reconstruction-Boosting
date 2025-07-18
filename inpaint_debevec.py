@@ -13,32 +13,23 @@ from transformers import pipeline as transformers_pipeline
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 
-# hyperparameters:
-# strength, residual, dir, debevec/gamma, prompt, iterations
 
 device = "cuda"
 img_size = (1024, 1024)
 
-method = "CEVR"
-dataset = "HDR-Real"
-prefix = "/ssddisk/ytlin/"
+method = "CEVR_hres"
+ablation = ""
+dataset = "self"
+prefix = "/home/ytlin/boosting_HDR/"
 data_folder = prefix + "data/" + dataset
-results_folder = prefix + "results/" + dataset
-output_folder = prefix + "results/intermediate_" + dataset
-# results_folder = "results_HDReye"
-# data_folder = "data_HDReye"
-# output_folder = "results_intermediate_HDReye"
-# results_folder = "results_self"
-# data_folder = "data_self"
-# output_folder = "results_intermediate_self"
+results_folder = "/home/ytlin/boosting_HDR/results/" + dataset + ablation
+output_folder = "/home/ytlin/boosting_HDR/results/intermediate_" + dataset + ablation
 
-# test_cases = ['t81', 't12', 't44', 't71', 't24', 't31', 't13', 't25', 't35', 't69', 't59', 't57', 't4', 't21', 't7', 't38', 't76', 't15', 't30', 't48', 't52', 't1', 't33', 't23', 't37', 't85', 't17', 't82', 't92', 't78', 't6', 't26', 't51', 't41', 't45', 't62', 't65', 't91', 't53', 't87', 't63', 't84', 't39', 't16', 't9', 't90', 't70', 't14', 't83', 't10', 't40', 't32', 't29', 't61', 't46', 't89', 't22', 't2', 't56', 't50', 't74', 't60', 't64', 't47', 't66', 't68', 't55', 't94', 't79', 't72', 't42', 't18', 't54', 't49', 't77', 't43']
-# test_cases = ['t81', 't3', 't24', 't13', 't25', 't69', 't7', 't38', 't15', 't5', 't48', 't80', 't28', 't82', 't78', 't73', 't65', 't91', 't11', 't8', 't27', 't9', 't75', 't29', 't46', 't22', 't50', 't60', 't47', 't66', 't68', 't49', 't34', 't77'] ]
-test_cases = None
+test_cases = None # all test cases
 iterations = 4
 
-strengths = [0.95, 0.94, 0.93, 0.92, 0.91]
-compensation_scale = [0.2, 0.3, 0.4, 0.5, 0.6]
+strengths = [1.0, 0.95, 0.90, 0.85, 0.80]
+compensation_scale = [0.3, 0.4, 0.5, 0.6, 0.6]
 
 if test_cases is None:
   test_cases = os.listdir(f"{data_folder}/{method}")
@@ -48,9 +39,7 @@ controlnet = ControlNetModel.from_pretrained(
     torch_dtype=torch.float16, 
     use_safetensors=True,
     variant="fp16"
-).to(device)
-
-# times = np.array([1, 1/2, 1/4, 1/8], dtype=np.float32)  
+).to(device) 
 
 vae = AutoencoderKL.from_pretrained("madebyollin/sdxl-vae-fp16-fix", torch_dtype=torch.float16)
 extra_kwargs = {"vae": vae} if vae is not None else {}
@@ -59,7 +48,6 @@ case_count = 0
 
 for test_case in test_cases:
   case_count += 1
-
   print(test_case, f', {case_count}/{len(test_cases)}')
   os.makedirs(f'{output_folder}/{method}/{test_case}/', exist_ok=True)
   pipe = CustomStableDiffusionXLControlNetInpaintPipeline.from_pretrained(
@@ -84,7 +72,7 @@ for test_case in test_cases:
   # prepare prompt  
   with open(prompt_path, "r") as f:
     prompt = f.read()
-  # prompt = "a photo of bright sky with a few clouds. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality."
+  # prompt = "a photo of bright sky with a few clouds. High resuloion image with a lot of details and sharpness. 4K, Ultra Quality. Good photo."
   negative_prompt = "ugly, dark, bad, terrible, awful, horrible, disgusting, gross, nasty, unattractive, unpleasant, repulsive, revolting, vile, foul, abhorrent, loathsome, hideous, unsightly, unlovely, unpleasing, unappealing, uninviting, unwelcome, unattractive, unprepossessing, uncomely, unbeautiful"
 
   # prepare CRF
@@ -111,19 +99,23 @@ for test_case in test_cases:
     os.makedirs(f'{output_folder}/{method}/{test_case}/{str(iteration)}_results/', exist_ok=True)
     generator = torch.Generator(device="cuda")
     seed = random.randint(0, 1000000)
+    if iteration == 1:
+      seed = 747701
     print('using random seed:', seed)
+
     for i in range(1, 4):
       generator = torch.Generator(device="cuda")
       generator.manual_seed(seed)
       exposure = str(-i)
       if iteration == 1:
         img_path = f"{data_folder}/{method}/{test_case}/{exposure}.png"
+      elif ablation == "_wo_comp":
+        img_path = f"{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped/{exposure}.png"
+      elif ablation == "_wo_comp_merge":
+        img_path = f"{output_folder}/{method}/{test_case}/{str(iteration-1)}_results/{exposure}.png"
       else:
         img_path = f"{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/{exposure}.png"
         mask_path = f"{output_folder}/{method}/{test_case}/{str(iteration-1)}_tone_mapped_residual/mask_{str(-i)}.png"
-        
-      # if iteration == 1:
-      #   seed = 824302
 
       mask_image = load_image(mask_path).resize(img_size)
       image = load_image(img_path).resize(img_size)
@@ -163,7 +155,6 @@ for test_case in test_cases:
         mask = np.asarray(mask_image)
         mask = mask.astype(np.float64) / 255
         cv2.imwrite(f'{output_folder}/{method}/{test_case}/{str(iteration)}_results/{exposure}.png', img*mask + image*(1-mask))
-        # img.save(f'{output_folder}/{test_case}/{str(iteration)}_results/{exposure}.png')
 
     # Merge to HDR
     
@@ -227,9 +218,6 @@ for test_case in test_cases:
 
       return imgOut
 
-
-    # path = 'data/Deep_/t60'
-    # path = f'data/Deep_Recursive_HDRI/t28'
     inverse_crf = scipy.io.loadmat(f'{data_folder}/{method}/{test_case}/response.mat')['lin_fun'].reshape((256, 3)).astype(np.float32)
 
     plt.figure
@@ -323,6 +311,7 @@ for test_case in test_cases:
 
       tone_mapped_image = np.zeros_like(hdr)  # Prepare output image
       for c in range(3):  # Loop over RGB channels
+
           # Create an interpolation function for the channel
           interp_func = interp1d(inverse_crf[:, c], ldr_indices, kind='linear', bounds_error=False, fill_value="extrapolate")
           
@@ -333,11 +322,13 @@ for test_case in test_cases:
       ldr = cv2.cvtColor(ldr, cv2.COLOR_RGB2BGR)
       cv2.imwrite(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/{str(i-3)}.png', ldr)
 
-    # Residual
+    # Compensation Block
     os.makedirs(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped_residual/', exist_ok=True)
     for i in range(-3, 0):
       # Load the image
       image = cv2.imread(f'{output_folder}/{method}/{test_case}/{iteration}_tone_mapped/{str(i)}.png').astype(np.float32)
+      if ablation == "_wo_merge":
+        image = cv2.imread(f'{output_folder}/{method}/{test_case}/{iteration}_results/{str(i)}.png').astype(np.float32)
       baseline = cv2.imread(f'{data_folder}/{method}/{test_case}/{str(i)}.png').astype(np.float32)
       if iteration == 1:
         mask = cv2.imread(f'{data_folder}/{method}/{test_case}/mask.png', cv2.IMREAD_GRAYSCALE)
@@ -389,7 +380,4 @@ for test_case in test_cases:
   img = cv2.resize(img, (1024, 1024))
   cv2.imwrite(f'{results_folder}/{method}/{test_case}/inpaint/-0.png', img)
   cv2.imwrite(f'{results_folder}/{method}/{test_case}/baseline/-0.png', img)
-  # shutil.copy(f'{data_folder}/{method}/{test_case}/0.png', f'{results_folder}/{method}/{test_case}/inpaint/-0.png')
-  # shutil.copy(f'{data_folder}/{method}/{test_case}/0.png', f'{results_folder}/{method}/{test_case}/baseline/-0.png')
-  
     
