@@ -1,4 +1,4 @@
-# HDR Reconstruction Boosting with Training-Free and Exposure-Consistent Diffusion
+# [WACV 2026] HDR Reconstruction Boosting with Training-Free and Exposure-Consistent Diffusion
 
 This project is built upon [DiffusionLight](https://diffusionlight.github.io/)
 
