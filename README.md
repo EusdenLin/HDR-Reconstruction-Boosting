@@ -7,11 +7,15 @@ This project is built upon [DiffusionLight](https://diffusionlight.github.io/)
 Single LDR to HDR reconstruction remains challenging for over-exposed regions where traditional methods often fail due to complete information loss. We present a training-free approach that enhances existing indirect HDR reconstruction methods through diffusion-based inpainting. Our method combines text-guided diffusion models with SDEdit refinement to generate plausible content in over-exposed areas while maintaining consistency across multi-exposure LDR images. Unlike previous approaches requiring extensive training, our method seamlessly integrates with existing indirect HDR reconstruction techniques through an iterative compensation mechanism that ensures luminance coherence across multiple exposures. We demonstrate significant improvements in both perceptual quality and quantitative metrics on standard HDR datasets and in-the-wild captures. Results show that our method effectively recovers natural details in challenging scenarios while preserving the advantages of existing HDR reconstruction pipelines.
 
  ## Table of contents
------
   * [Installation](#Installation)
   * [Preprocess](#Preprocess)
   * [Inference](#Inference)
-------
+
+## Update
+
+
+[2025/11/07] Our paper was accepted by WACV 2026!
+
 
 ## Environment
 
